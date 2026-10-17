@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.24.1
+- **Conga 6090** reconocido por su nombre (`project_type` `CECOTECCRL30S-1001`; confirmado por
+  @Nitrosito, issue #9).
+- **Arreglo de estado en el 6090**: `workMode=10` (que el 6090 usa a mitad de limpieza) ya no se
+  publica como «inactivo» → ahora «limpiando».
+- Descripción y README actualizados: modelos confirmados (4690 / 6090 / 7090 / 9090), 3890
+  reportado, y **nota de compatibilidad** (los Conga basados en **Tuya**, como la línea
+  **8290 / Immortal**, no están soportados → usar LocalTuya).
+
 ## 0.24.0
 - **Control manual (mando)**: nuevo botón «Manual» en la barra de controles que despliega un mando
   en la esquina del mapa. Cuatro flechas para mover el robot (adelante / atrás / izquierda /

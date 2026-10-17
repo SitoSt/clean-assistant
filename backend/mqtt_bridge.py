@@ -41,6 +41,7 @@ CONGA_MODELS = {
     "CECOTECCRL350-1001": ("Conga 8090", "Conga 8090 Ultra"),
     "CECOTECCRL300-1001": ("Conga 4690", "Conga 4690 Ultra"),    # confirmado por @teosoft0 (issue #1)
     "CECOTECCRL350-2001": ("Conga 9090", "Conga 9090"),          # confirmado por @serra410 (issue #3)
+    "CECOTECCRL30S-1001": ("Conga 6090", "Conga 6090"),          # confirmado por @Nitrosito (issue #9)
 }
 
 

@@ -3,12 +3,16 @@
 # Clean Assistant
 
 Aplicación **local y sin nube** para gestionar el robot aspirador **Cecotec Conga
-8090 Ultra** — y otros modelos Conga de la misma plataforma (**4690 / 9090 / 7090**
-confirmados por usuarios): mapa en vivo, limpieza por habitaciones, zonas, horarios,
-historial y todos los ajustes, con una interfaz web propia y bonita, **disponible en 9
-idiomas** (español, inglés, alemán, italiano, francés, portugués, neerlandés, catalán y polaco). En la línea de
-Valetudo/Congatudo, pero para la generación 8000 (que usa TLS + WebSocket + JSON +
-Protobuf, no soportada por aquellos proyectos).
+8090 Ultra** — y otros modelos Conga de la misma plataforma **3irobotix** (**4690 / 6090 /
+7090 / 9090** confirmados por usuarios; **3890** reportado): mapa en vivo, limpieza por
+habitaciones, zonas, horarios, historial y todos los ajustes, con una interfaz web propia y
+bonita, **disponible en 9 idiomas** (español, inglés, alemán, italiano, francés, portugués,
+neerlandés, catalán y polaco). En la línea de Valetudo/Congatudo, pero para la generación
+8000 (que usa TLS + WebSocket + JSON + Protobuf, no soportada por aquellos proyectos).
+
+> **Compatibilidad de modelos:** estos Conga usan la plataforma **3irobotix**. Algunos
+> modelos nuevos (p. ej. la línea **8290 / Immortal**) son **Tuya**, no 3irobotix, y **no**
+> están soportados aquí — para esos, usa [LocalTuya](https://github.com/xZetsubou/hass-localtuya).
 
 > Se apoya en la ingeniería inversa del repo de documentación:
 > [conga_8090_mqtt_bridge](https://github.com/miguelsg29/conga_8090_mqtt_bridge).

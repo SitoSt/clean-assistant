@@ -3,11 +3,16 @@
 # Clean Assistant
 
 A **local, no-cloud** app to manage the **Cecotec Conga 8090 Ultra** — and other Conga
-models on the same platform (**4690 / 9090 / 7090** confirmed by users): live map,
-per-room cleaning, zones, schedules, history and every setting, in its own polished web
-interface, **available in 9 languages** (Spanish, English, German, Italian, French, Portuguese, Dutch, Catalan, Polish).
+models on the same **3irobotix** platform (**4690 / 6090 / 7090 / 9090** confirmed by users;
+**3890** reported working): live map, per-room cleaning, zones, schedules, history and every
+setting, in its own polished web interface, **available in 9 languages** (Spanish, English,
+German, Italian, French, Portuguese, Dutch, Catalan, Polish).
 In the spirit of Valetudo/Congatudo, but for the 8000 generation (which uses TLS +
 WebSocket + JSON + Protobuf, not supported by those projects).
+
+> **Model compatibility:** these Congas use the **3irobotix** platform. Some newer models
+> (e.g. the **8290 / Immortal** line) are **Tuya-based**, not 3irobotix, and are **not**
+> supported here — for those, use [LocalTuya](https://github.com/xZetsubou/hass-localtuya).
 
 > Built on the reverse engineering from the documentation repo:
 > [conga_8090_mqtt_bridge](https://github.com/miguelsg29/conga_8090_mqtt_bridge).
