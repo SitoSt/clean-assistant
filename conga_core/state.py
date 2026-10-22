@@ -91,7 +91,7 @@ class RobotState:
 
         if charge == 1:
             st = "docked"
-        elif mode == 5:
+        elif mode in (5, 47):   # 47: el 6090 vuelve a la base tras mapear; si fuera 'idle', setSaveMap sale antes de tiempo
             st = "returning"
         elif mode == 37:
             st = "paused"
