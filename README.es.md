@@ -4,7 +4,7 @@
 
 Aplicación **local y sin nube** para gestionar el robot aspirador **Cecotec Conga
 8090 Ultra** — y otros modelos Conga de la misma plataforma **3irobotix** (**4690 / 6090 /
-7090 / 9090** confirmados por usuarios; **3890** reportado): mapa en vivo, limpieza por
+7090 / 9090 / 3890** confirmados por usuarios): mapa en vivo, limpieza por
 habitaciones, zonas, horarios, historial y todos los ajustes, con una interfaz web propia y
 bonita, **disponible en 9 idiomas** (español, inglés, alemán, italiano, francés, portugués,
 neerlandés, catalán y polaco). En la línea de Valetudo/Congatudo, pero para la generación

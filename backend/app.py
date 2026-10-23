@@ -786,18 +786,24 @@ async def lifespan(app: FastAPI):
         # mapeo nuevo: cuando el robot sale a mapear y luego vuelve a la base, guardar el mapa
         if _new_map["pending"]:
             s = getattr(robot.state, "state", None)
-            if s not in ("docked", "idle", "charging", None):
+            # Guardar SOLO cuando el robot está de verdad en la base (docked/charging), NUNCA con
+            # "idle": cada modelo reporta un workMode distinto al volver tras mapear y, si no está
+            # reconocido, cae en "idle"; enviar setSaveMap antes de acoplar hace que el robot lo
+            # ignore y se pierda el mapa. Keyear en "docked" lo arregla para cualquier modelo
+            # (issues #9/#10: 6090 workMode=47, 3890, …).
+            if s in ("docked", "charging"):
+                if _new_map["moved"]:
+                    _new_map["pending"] = False
+                    _new_map["moved"] = False
+                    try:
+                        robot.command(cmd.save_map())     # setSaveMap: conserva el mapa recién creado
+                        print("[mapa] mapeo completado -> setSaveMap (guardar mapa nuevo)")
+                        # espera el id del mapa nuevo para ponerle el nombre que eligió el usuario
+                        _new_map["awaiting"] = True
+                    except Exception:
+                        pass
+            elif s not in ("idle", None):             # mapeando/volviendo: el robot está fuera
                 _new_map["moved"] = True
-            elif _new_map["moved"]:
-                _new_map["pending"] = False
-                _new_map["moved"] = False
-                try:
-                    robot.command(cmd.save_map())     # setSaveMap: conserva el mapa recién creado
-                    print("[mapa] mapeo completado -> setSaveMap (guardar mapa nuevo)")
-                    # espera el id del mapa nuevo para ponerle el nombre que eligió el usuario
-                    _new_map["awaiting"] = True
-                except Exception:
-                    pass
 
     def on_map():
         if getattr(robot, "map_empty", False):     # el robot se ha quedado sin mapa
@@ -941,7 +947,7 @@ async def lifespan(app: FastAPI):
     mqtt.stop()
 
 
-app = FastAPI(title="Clean Assistant", version="0.24.2", lifespan=lifespan)
+app = FastAPI(title="Clean Assistant", version="0.24.3", lifespan=lifespan)
 
 
 @app.get("/api/state")

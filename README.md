@@ -3,8 +3,8 @@
 # Clean Assistant
 
 A **local, no-cloud** app to manage the **Cecotec Conga 8090 Ultra** — and other Conga
-models on the same **3irobotix** platform (**4690 / 6090 / 7090 / 9090** confirmed by users;
-**3890** reported working): live map, per-room cleaning, zones, schedules, history and every
+models on the same **3irobotix** platform (**4690 / 6090 / 7090 / 9090 / 3890** confirmed by
+users): live map, per-room cleaning, zones, schedules, history and every
 setting, in its own polished web interface, **available in 9 languages** (Spanish, English,
 German, Italian, French, Portuguese, Dutch, Catalan, Polish).
 In the spirit of Valetudo/Congatudo, but for the 8000 generation (which uses TLS +

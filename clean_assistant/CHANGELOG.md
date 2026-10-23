@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.24.3
+- **Conga 3890** reconocido por su nombre (`project_type` `CECOTECCRL20S-1001`; confirmado por
+  @Here87 en el foro de Home Assistant).
+- **Guardado de mapa nuevo robusto para todos los modelos**: `setSaveMap` ahora se envía **solo
+  cuando el robot está realmente en la base** (`docked`), no al reportar «inactivo». Así el mapa se
+  guarda aunque el modelo use un `workMode` de «volviendo» que no reconozcamos (generaliza el
+  arreglo del 6090 y soluciona el 3890 reportado por @Here87).
+
 ## 0.24.2
 - **Arreglo: el Conga 6090 no guardaba el mapa nuevo** (issue #10, @SitoSt). Al terminar de mapear,
   el 6090 reporta `workMode=47` mientras vuelve a la base; se interpretaba como «inactivo» y se
