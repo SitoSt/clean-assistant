@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.2
+- **Arreglo: el Conga 6090 no guardaba el mapa nuevo** (issue #10, @SitoSt). Al terminar de mapear,
+  el 6090 reporta `workMode=47` mientras vuelve a la base; se interpretaba como «inactivo» y se
+  enviaba `setSaveMap` **antes** de llegar al dock (el robot lo ignoraba). Ahora `workMode=47` =
+  «volviendo a la base», así que `setSaveMap` se envía al acoplarse y el mapa se guarda. (Cierra el
+  quirk #4 reportado en #9.)
+
 ## 0.24.1
 - **Conga 6090** reconocido por su nombre (`project_type` `CECOTECCRL30S-1001`; confirmado por
   @Nitrosito, issue #9).
