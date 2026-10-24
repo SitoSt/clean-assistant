@@ -995,7 +995,7 @@ async def lifespan(app: FastAPI):
     mqtt.stop()
 
 
-app = FastAPI(title="Clean Assistant", version="0.26.0", lifespan=lifespan)
+app = FastAPI(title="Clean Assistant", version="0.26.1", lifespan=lifespan)
 
 
 @app.get("/api/state")
@@ -1012,7 +1012,8 @@ def get_info():
     except Exception:
         model = "Conga"
     return {"version": app.version, "model": model,
-            "mode": getattr(robot, "link", "local")}
+            "mode": getattr(robot, "link", "local"),
+            "backend": "legacy" if LEGACY else "new"}   # la interfaz oculta lo que no aplica
 
 
 def _supervisor_get(path: str):
@@ -1070,16 +1071,28 @@ def _server_ip() -> str | None:
 def get_setup():
     """Datos para el asistente de primer arranque: IP a la que redirigir el DNS del robot,
     el hostname a reescribir, si el robot ya conecta, y si es primer arranque (sin mapas)."""
-    host = getattr(getattr(robot, "cfg", None), "cloud_host", "tcp-cecotec.3irobotix.net")
-    # con solo el de CONTROL, Clean Assistant ya manda al robot; los de OTA e HISTORIAL lo
-    # hacen 100% local (funciona aunque Cecotec apague sus servidores). das/log NO hacen falta.
-    dns_hosts = [
-        {"host": host, "role": "control"},
-        {"host": "cecotec-ota.3irobotix.net", "role": "ota"},
-        {"host": "eu-ota.3irobotix.net", "role": "ota"},
-        {"host": "web-eu.3irobotix.net", "role": "historial"},
-        {"host": "web-cecotec.3irobotix.net", "role": "historial"},
-    ]
+    if LEGACY:
+        # gen. 3xxx/4xxx: un único host para cmd/map/hora (4010/4030/4050). El resto son los que
+        # redirige Congatudo para cortar del todo con la nube (OTA, descargas, logs).
+        host = "cecotec.das.3irobotix.net"
+        dns_hosts = [{"host": host, "role": "control"}]
+        dns_hosts += [{"host": h, "role": "ota"} for h in (
+            "cecotec.ota.3irobotix.net", "cecotec-upgrade.3irobotix.net", "eu.ota.3irobotics.net",
+            "cecotec.download.3irobotix.net", "cecotec-download.3irobotix.net")]
+        dns_hosts += [{"host": h, "role": "nube"} for h in (
+            "cecotec-das.3irobotix.net", "eu.das.3irobotics.net", "cecotec.log.3irobotix.net",
+            "cecotec-log.3irobotix.net", "eu.log.3irobotics.net")]
+    else:
+        host = getattr(getattr(robot, "cfg", None), "cloud_host", "tcp-cecotec.3irobotix.net")
+        # con solo el de CONTROL, Clean Assistant ya manda al robot; los de OTA e HISTORIAL lo
+        # hacen 100% local (funciona aunque Cecotec apague sus servidores). das/log NO hacen falta.
+        dns_hosts = [
+            {"host": host, "role": "control"},
+            {"host": "cecotec-ota.3irobotix.net", "role": "ota"},
+            {"host": "eu-ota.3irobotix.net", "role": "ota"},
+            {"host": "web-eu.3irobotix.net", "role": "historial"},
+            {"host": "web-cecotec.3irobotix.net", "role": "historial"},
+        ]
     return {"server_ip": _server_ip(), "dns_host": host, "dns_hosts": dns_hosts,
             "robot_online": bool(getattr(robot.state, "online", False)),
             "first_run": not house_maps.maps,

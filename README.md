@@ -317,7 +317,9 @@ tested live on a robot yet, hence **experimental** — feedback is very welcome.
 1. In the app's **Configuration**, set **`BACKEND`** to **`legacy`** and restart the app.
 2. Point **`cecotec.das.3irobotix.net`** to the **Home Assistant IP** — with your DNS server
    (AdGuard Home, Pi-hole, router) or, if you have root on the robot, in its `/etc/hosts`
-   (same method as Congatudo). The robot uses that single host for the three ports.
+   (same method as Congatudo). The robot uses that single host for the three ports. To
+   keep it off Cecotec's cloud entirely (no firmware updates), also redirect the other
+   domains Congatudo uses; Clean Assistant lists them in **Settings → Network configuration**.
 3. **Restart the robot.** No IDs to fill in: the robot identifies itself when it connects.
 
 **Implemented:** status, battery and warnings · live map with rooms, robot position, dock,

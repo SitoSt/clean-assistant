@@ -237,6 +237,8 @@
   .wiznum{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;flex:0 0 auto}
   .wizstep .hint{font-size:12px;line-height:1.5;color:var(--muted);margin:4px 0}
   .wizdns{display:flex;flex-direction:column;gap:6px;margin:8px 0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  /* backend legacy (Conga 3xxx/4xxx): oculta lo que no existe en esa generación */
+  body.legacy .nolegacy,body.legacy .mDel{display:none!important}
   .wizdns-row{display:flex;align-items:center;gap:10px}
   .wizdns-k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:66px;flex:0 0 auto}
   .wizdns code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;-webkit-user-select:all;user-select:all;cursor:pointer;word-break:break-all}
@@ -488,8 +490,8 @@
 
       <div class="tabpane" data-pane="ajustes">
         <div class="phead">Modo de funcionamiento</div>
-        <div class="seg" id="linkSeg"><button data-v="local" aria-pressed="true">Local</button><button data-v="cloud">Cloud + Local</button></div>
-        <p class="hint" style="opacity:.65;font-size:11.5px;margin:6px 0 2px">Local: sin nube (la app de Cecotec no llega al robot). Cloud + Local: el robot pasa por la nube real, la app oficial funciona y se capturan sus comandos (útil para depurar).</p>
+        <div class="seg nolegacy" id="linkSeg"><button data-v="local" aria-pressed="true">Local</button><button data-v="cloud">Cloud + Local</button></div>
+        <p class="hint nolegacy" style="opacity:.65;font-size:11.5px;margin:6px 0 2px">Local: sin nube (la app de Cecotec no llega al robot). Cloud + Local: el robot pasa por la nube real, la app oficial funciona y se capturan sus comandos (útil para depurar).</p>
 
         <details class="netcfg" id="netCfg">
           <summary>Configuración de red (DNS del robot)</summary>
@@ -508,16 +510,16 @@
           <p class="hint" data-i18n-html="backup_desc" style="opacity:.7;font-size:11.5px;margin:6px 0">Exporta o importa la configuración de Clean Assistant: <b>mapas</b> (nombres), <b>zonas prohibidas</b>, <b>zonas sin fregona</b>, <b>zonas de limpieza</b> y <b>horarios</b>. Útil para pasarla entre servidores (p. ej. de este equipo al add-on de Home Assistant). Las <b>habitaciones</b> (nombres, tipo y suelo) las guarda el propio robot en su mapa, así que viajan con él.</p>
           <div class="btnrow"><button class="btn ghost" id="cfgExport" style="width:auto;padding:7px 14px;font-size:12.5px">Exportar</button><button class="btn ghost" id="cfgImport" style="width:auto;padding:7px 14px;font-size:12.5px">Importar…</button></div>
           <input type="file" id="cfgFile" accept="application/json,.json" style="display:none"/>
-          <p class="hint" data-i18n-html="backup_robotkey" style="opacity:.7;font-size:11.5px;margin:12px 0 6px;border-top:1px solid rgba(128,128,128,.18);padding-top:12px"><b>Datos del robot (llave de recuperación).</b> Exporta la <b>identidad del robot</b> (DID, número de serie, MAC…). Guárdala aparte, en lugar seguro: con ella Clean Assistant puede volver a servir al robot en una instalación nueva <b>sin pasar por la nube de Cecotec</b>. Son credenciales del robot; no las compartas. (El resto —mapas, zonas y horarios— va en la exportación de arriba.)</p>
-          <div class="btnrow"><button class="btn ghost" id="idExport" style="width:auto;padding:7px 14px;font-size:12.5px">Exportar datos del robot</button><button class="btn ghost" id="idImport" style="width:auto;padding:7px 14px;font-size:12.5px">Importar…</button></div>
+          <p class="hint nolegacy" data-i18n-html="backup_robotkey" style="opacity:.7;font-size:11.5px;margin:12px 0 6px;border-top:1px solid rgba(128,128,128,.18);padding-top:12px"><b>Datos del robot (llave de recuperación).</b> Exporta la <b>identidad del robot</b> (DID, número de serie, MAC…). Guárdala aparte, en lugar seguro: con ella Clean Assistant puede volver a servir al robot en una instalación nueva <b>sin pasar por la nube de Cecotec</b>. Son credenciales del robot; no las compartas. (El resto —mapas, zonas y horarios— va en la exportación de arriba.)</p>
+          <div class="btnrow nolegacy"><button class="btn ghost" id="idExport" style="width:auto;padding:7px 14px;font-size:12.5px">Exportar datos del robot</button><button class="btn ghost" id="idImport" style="width:auto;padding:7px 14px;font-size:12.5px">Importar…</button></div>
           <input type="file" id="idFile" accept="application/json,.json" style="display:none"/>
         </details>
 
         <div class="phead">Mapas de la casa</div>
-        <p class="hint" style="opacity:.65;font-size:11.5px;margin:0 0 8px">Clean Assistant recuerda los mapas que va viendo. Pulsa uno para activarlo en el robot. (Al cambiar de mapa, las zonas y horarios son por mapa.) Puedes borrar cualquier mapa; si borras el último, el robot se queda sin mapa y podrás crear uno nuevo desde cero.</p>
+        <p class="hint nolegacy" style="opacity:.65;font-size:11.5px;margin:0 0 8px">Clean Assistant recuerda los mapas que va viendo. Pulsa uno para activarlo en el robot. (Al cambiar de mapa, las zonas y horarios son por mapa.) Puedes borrar cualquier mapa; si borras el último, el robot se queda sin mapa y podrás crear uno nuevo desde cero.</p>
         <div id="mapsList"></div>
-        <div class="btnrow"><button class="btn ghost" id="newMapBtn">+ Crear mapa nuevo</button><button class="btn ghost" id="wipeMapsBtn" style="color:var(--critical)">Borrar todos</button></div>
-        <div id="newMapForm" style="display:none">
+        <div class="btnrow nolegacy"><button class="btn ghost" id="newMapBtn">+ Crear mapa nuevo</button><button class="btn ghost" id="wipeMapsBtn" style="color:var(--critical)">Borrar todos</button></div>
+        <div id="newMapForm" class="nolegacy" style="display:none">
           <div class="field"><label>Nombre del mapa</label><input type="text" id="nmName" class="tinput" placeholder="Planta baja"/></div>
           <div class="field"><label>Nombre de la casa</label><input type="text" id="nmHouse" class="tinput" placeholder="Casa"/></div>
           <p class="hint" style="opacity:.65;font-size:11.5px;margin:0 0 6px">Al crear, el robot recorrerá toda la casa para mapearla (tarda un rato). El mapa nuevo empieza en blanco (sin zonas ni horarios).</p>
@@ -567,7 +569,7 @@
 <div class="modal-ov" id="wizOv" hidden>
   <div class="modal wizmodal" role="dialog" aria-modal="true" aria-labelledby="wizT">
     <h3 id="wizT">¡Bienvenido a Clean Assistant!</h3>
-    <p class="wizintro">Controla tu Conga 100% en local, sin la nube de Cecotec. Solo hay que hacer dos cosas:</p>
+    <p class="wizintro nolegacy">Controla tu Conga 100% en local, sin la nube de Cecotec. Solo hay que hacer dos cosas:</p>
 
     <div class="wizstep">
       <div class="wizstep-h"><span class="wiznum">1</span> Redirige el DNS del robot a este servidor</div>
@@ -582,7 +584,7 @@
       <div class="wizconn" id="wizConn">⏳ Esperando a que el robot conecte…</div>
     </div>
 
-    <div class="wizstep">
+    <div class="wizstep nolegacy">
       <div class="wizstep-h"><span class="wiznum">2</span> Crea el mapa de tu casa</div>
       <div class="field"><label>Nombre de la casa</label><input type="text" id="wizHouse" class="tinput" value="Mi casa" placeholder="Mi casa"/></div>
       <div class="field"><label>Nombre del mapa</label><input type="text" id="wizName" class="tinput" value="Planta baja" placeholder="Planta baja"/></div>
@@ -591,7 +593,7 @@
 
     <div class="macts">
       <button class="btn ghost" id="wizSkip">Ahora no</button>
-      <button class="btn" id="wizCreate">Crear y mapear</button>
+      <button class="btn nolegacy" id="wizCreate">Crear y mapear</button>
     </div>
   </div>
 </div>
@@ -891,6 +893,7 @@
   "⏳ El robot no está conectado (revisa el DNS y reinicia el robot)":{en:"⏳ The robot isn't connected (check DNS and restart the robot)",pt:"⏳ O robô não está ligado (verifica o DNS e reinicia o robô)",fr:"⏳ Le robot n’est pas connecté (vérifiez le DNS et redémarrez le robot)",pl:"⏳ Robot nie jest połączony (sprawdź DNS i uruchom robota ponownie)",de:"⏳ Der Roboter ist nicht verbunden (prüfe den DNS und starte den Roboter neu)",it:"⏳ Il robot non è connesso (controlla il DNS e riavvia il robot)",nl:"⏳ De robot is niet verbonden (controleer de DNS en herstart de robot)",ca:"⏳ El robot no està connectat (revisa el DNS i reinicia el robot)"},
   "¡copiado!":{en:"copied!",pt:"copiado!",fr:"copié !",pl:"skopiowano!",de:"kopiert!",it:"copiato!",nl:"gekopieerd!",ca:"copiat!"},
   "OTA (arranque)":{en:"OTA (boot)",pt:"OTA (arranque)",fr:"OTA (démarrage)",pl:"OTA (rozruch)",de:"OTA (Start)",it:"OTA (avvio)",nl:"OTA (opstart)",ca:"OTA (arrencada)"},
+  "nube Cecotec":{en:"Cecotec cloud",pt:"nuvem Cecotec",fr:"cloud Cecotec",pl:"chmura Cecotec",de:"Cecotec-Cloud",it:"cloud Cecotec",nl:"Cecotec-cloud",ca:"núvol Cecotec"},
   "historial":{en:"history",pt:"histórico",fr:"historique",pl:"historia",de:"Verlauf",it:"cronologia",nl:"geschiedenis",ca:"historial"},
   "Iniciando…":{en:"Starting…",pt:"A iniciar…",fr:"Démarrage…",pl:"Uruchamianie…",de:"Wird gestartet…",it:"Avvio…",nl:"Starten…",ca:"Iniciant…"},
   "No se pudo exportar.":{en:"Could not export.",pt:"Não foi possível exportar.",fr:"Échec de l’exportation.",pl:"Nie udało się wyeksportować.",de:"Export fehlgeschlagen.",it:"Impossibile esportare.",nl:"Exporteren mislukt.",ca:"No s'ha pogut exportar."},
@@ -2243,7 +2246,7 @@
   function renderDnsExtra(el, hosts){
     if(!el) return;
     el.innerHTML='';
-    var roleName={ota:t('OTA (arranque)'),historial:t('historial')};
+    var roleName={ota:t('OTA (arranque)'),historial:t('historial'),nube:t('nube Cecotec')};
     (hosts||[]).filter(function(h){return h.role!=='control';}).forEach(function(h){
       var row=document.createElement('div'); row.className='wizdns-row';
       var k=document.createElement('span'); k.className='wizdns-k'; k.textContent=roleName[h.role]||h.role;
@@ -2372,6 +2375,7 @@
     if(sub&&info.model) sub.textContent=info.model+' · '+t(info.mode==='cloud'?'control cloud + local':'control local');
     var ver=document.getElementById('appVer');
     if(ver&&info.version) ver.textContent='v'+info.version;
+    if(info.backend==='legacy') document.body.classList.add('legacy');   // Conga 3xxx/4xxx
   }).catch(function(){});
   connect();
 })();
