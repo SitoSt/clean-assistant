@@ -75,10 +75,18 @@ def _data(name: str) -> str:
 # CONGA_MODE=real -> servidor TLS+WS que habla con tu Conga (necesita datos en .env
 # y certificados). Por defecto 'mock': robot simulado, para desarrollar sin robot.
 MODE = (env("CONGA_MODE", "mock") or "mock").lower()
+# CONGA_BACKEND=legacy -> generación 3irobotix 3xxx/4xxx (Conga 3090/3490/4090…): protocolo
+# propio en TCP claro (4010/4030/4050), sin TLS/WebSocket. Por defecto 'new' (8090/9090/4690…).
+BACKEND = (env("CONGA_BACKEND", "new") or "new").lower()
+LEGACY = MODE == "real" and BACKEND == "legacy"
 if MODE == "real":
-    from conga_core.robot import RealRobot
     from conga_core.config import RobotConfig
-    robot = RealRobot(RobotConfig.from_env())
+    if LEGACY:
+        from conga_core.legacy.robot import LegacyRobot
+        robot = LegacyRobot(RobotConfig.from_env())
+    else:
+        from conga_core.robot import RealRobot
+        robot = RealRobot(RobotConfig.from_env())
 else:
     robot = MockRobot()
 
@@ -876,7 +884,7 @@ async def lifespan(app: FastAPI):
         peticiones (via cloud_stub) y, cuando tiene los esenciales (DID + SN), completa MAC
         (ARP) + factory_id (por defecto 1003) + userid (acuñado del DID) y configura CA. Solo
         si aún no hay identidad; no toca instalaciones ya configuradas."""
-        if MODE != "real" or robot.cfg.configured:
+        if MODE != "real" or LEGACY or robot.cfg.configured:
             return
         for k in ("did", "sn", "project_type", "factory_id"):
             if ident.get(k) and not _auto_ident.get(k):
@@ -904,7 +912,8 @@ async def lifespan(app: FastAPI):
     # identidad del propio robot de sus peticiones OTA (_auto_provision, sin nube). Arrancamos
     # en cloud como RESERVA (si solo se redirige tcp-cecotec, se captura del relay); en cuanto
     # llega la OTA al cloud_stub, _auto_provision configura CA y cambia a local por su cuenta.
-    if MODE == "real" and not robot.cfg.configured:
+    # (la gen. legacy no necesita provisión: el robot manda su identidad al registrarse)
+    if MODE == "real" and not LEGACY and not robot.cfg.configured:
         robot.link = "cloud"
         print("[provision] primer arranque: aprendo la identidad del robot "
               "(local por OTA; cloud como reserva)")
@@ -930,7 +939,8 @@ async def lifespan(app: FastAPI):
     # cloud LOCAL: suplanta OTA (para que el robot no dependa de la nube ni actualice firmware)
     # y acepta las subidas de informes de limpieza, que ingerimos en el historial. Requiere
     # redirigir por DNS los dominios de Cecotec a este servidor (ver cloud_stub.py).
-    if MODE == "real":
+    # Solo gen. nueva: la legacy no usa estos servicios TLS (su OTA es HTTP en otros puertos).
+    if MODE == "real" and not LEGACY:
         def _on_report(rep):
             if _ingest_report(rep):
                 asyncio.run_coroutine_threadsafe(broadcast_history(), loop)
@@ -940,14 +950,14 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[cloud-local] no se pudo arrancar: {e}")
     mqtt.start()
-    print(f"[Clean Assistant] modo={MODE}")
+    print(f"[Clean Assistant] modo={MODE} backend={'legacy' if LEGACY else 'new'}")
     task = asyncio.create_task(_loop())
     yield
     task.cancel()
     mqtt.stop()
 
 
-app = FastAPI(title="Clean Assistant", version="0.24.3", lifespan=lifespan)
+app = FastAPI(title="Clean Assistant", version="0.25.0", lifespan=lifespan)
 
 
 @app.get("/api/state")

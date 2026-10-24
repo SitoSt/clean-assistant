@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.25.0
+- **Nuevo: soporte EXPERIMENTAL para los Conga antiguos (3090 / 3490 / 4090)** mediante un segundo
+  backend, `legacy` (issue #12, gracias a @mactron254). Esa generación habla otro protocolo de
+  3irobotix (TCP en claro en 4010/4030/4050, tramas binarias + Protobuf), el de Congatudo, en vez
+  del TLS + WebSocket del 9090. Se activa con la nueva opción **`BACKEND: legacy`** y apuntando
+  `cecotec.das.3irobotix.net` a Home Assistant. No hace falta rellenar IDs.
+  - Portado a Python desde `@agnoc/core` (sin dependencias nuevas; Protobuf decodificado a mano) y
+    **validado contra una captura de tráfico real de un 4090**: respuestas, mapa y orden de limpiar
+    habitaciones idénticas byte a byte a las reales. Aún sin probar en vivo con un robot.
+  - Funciona: estado, batería y avisos; mapa en vivo (habitaciones, robot, base, recorrido, paredes
+    virtuales); iniciar/pausar/reanudar/base/localizar; succión y agua; habitaciones; zonas; paredes
+    virtuales; mando manual; voz, horario silencioso, alfombras, doble pasada; consumibles. Pendiente:
+    horarios y gestión de varios mapas. En HA aparece como «Conga 3xxx/4xxx (legacy)».
+  - Arranca sin quedarse esperando la auto-provisión (era el síntoma con el 4090). Si el robot ya
+    estuvo con Congatudo, se adoptan sus identificadores y no hace falta re-emparejarlo.
+- El dibujado del mapa (`build_map`) se separa del decodificador para compartirlo entre ambas
+  generaciones (sin cambios de comportamiento en los modelos actuales).
+- README: sección de Conga antiguos y lista de robots completada (6090, 3890).
+
 ## 0.24.3
 - **Conga 3890** reconocido por su nombre (`project_type` `CECOTECCRL20S-1001`; confirmado por
   @Here87 en el foro de Home Assistant).

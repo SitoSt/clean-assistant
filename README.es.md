@@ -13,6 +13,8 @@ neerlandés, catalán y polaco). En la línea de Valetudo/Congatudo, pero para l
 > **Compatibilidad de modelos:** estos Conga usan la plataforma **3irobotix**. Algunos
 > modelos nuevos (p. ej. la línea **8290 / Immortal**) son **Tuya**, no 3irobotix, y **no**
 > están soportados aquí — para esos, usa [LocalTuya](https://github.com/xZetsubou/hass-localtuya).
+> Los Conga antiguos (**3090 / 3490 / 4090**) usan otro protocolo de 3irobotix: los soporta un
+> **backend `legacy` experimental** — ver [Conga antiguos](#conga-antiguos-3090--3490--4090--backend-legacy-experimental).
 
 > Se apoya en la ingeniería inversa del repo de documentación:
 > [conga_8090_mqtt_bridge](https://github.com/miguelsg29/conga_8090_mqtt_bridge).
@@ -292,10 +294,39 @@ de esa plataforma también funcionan**. Confirmados hasta ahora:
 - **Conga 4690 Ultra** — confirmado por un usuario de la comunidad
 - **Conga 9090** — confirmado por un usuario de la comunidad
 - **Conga 7090** — confirmado por un usuario de la comunidad
+- **Conga 6090** — confirmado por usuarios de la comunidad
+- **Conga 3890** — confirmado por un usuario de la comunidad
 
 Home Assistant muestra el modelo real (según el `project_type` del robot). Si pruebas otro
 modelo, [abre un issue](https://github.com/miguelsg29/clean-assistant/issues) con tu
 `PROJECT_TYPE` y qué funciona o no — lo añado para que se reconozca por su nombre.
+
+### Conga antiguos (3090 / 3490 / 4090) — backend `legacy` (experimental)
+
+La generación antigua de 3irobotix habla **otro protocolo**: TCP en claro en los puertos
+**4010 / 4030 / 4050** con tramas binarias + Protobuf (el que implementan
+[Congatudo](https://github.com/congatudo/Congatudo) / [`@agnoc/core`](https://github.com/congatudo/agnoc)),
+en vez de TLS + WebSocket en el 9090. **El número de modelo no indica la generación**: por
+ejemplo, el 4690 usa el protocolo nuevo y el 4090 el antiguo.
+
+Desde la **v0.25.0** Clean Assistant incluye un segundo backend para ella, portado a Python
+desde `@agnoc/core` y validado contra una **captura de tráfico real de un Conga 4090** (gracias a
+[@mactron254](https://github.com/miguelsg29/clean-assistant/issues/12)): nuestras respuestas, el
+mapa en vivo y la orden de limpiar habitaciones coinciden byte a byte con las reales. Aún no se
+ha probado en vivo con un robot, por eso es **experimental** — se agradece mucho el feedback.
+
+1. En la **Configuración** de la app, pon **`BACKEND`** en **`legacy`** y reinicia la app.
+2. Apunta **`cecotec.das.3irobotix.net`** a la **IP de Home Assistant**, con tu servidor DNS
+   (AdGuard Home, Pi-hole, router) o, si tienes root en el robot, en su `/etc/hosts` (el mismo
+   método que Congatudo). El robot usa ese único host para los tres puertos.
+3. **Reinicia el robot.** No hay que rellenar IDs: el robot se identifica al conectar.
+
+**Implementado:** estado, batería y avisos · mapa en vivo con habitaciones, posición del robot,
+base, recorrido y paredes virtuales · iniciar / pausar / reanudar / volver a la base / localizar ·
+succión y agua · limpieza por habitaciones · limpieza por zonas · paredes virtuales · control
+manual · voz, horario silencioso, turbo en alfombras, doble pasada · consumibles · historial.
+**Aún no:** horarios y gestión de varios mapas. Las zonas "sin fregona" no existen en esa
+generación. Home Assistant lo muestra como **"Conga 3xxx/4xxx (legacy)"**.
 
 ## Apoyar el proyecto
 

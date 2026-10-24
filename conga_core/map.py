@@ -295,9 +295,16 @@ def _parse_zone(chunk: bytes) -> dict:
 
 def decode_map(frame: bytes) -> dict:
     """Frame binario crudo -> mapa estructurado para el frontend."""
-    info = _parse_protobuf(_extract_zlib(frame))
+    return build_map(_parse_protobuf(_extract_zlib(frame)))
+
+
+def build_map(info: dict, W: int = GRID_W, H: int = GRID_H) -> dict:
+    """Rejilla + habitaciones + poses -> mapa para el frontend. Lo comparten la gen. nueva
+    (decode_map) y la legacy (conga_core/legacy), que usan la misma rejilla y valores.
+    info: grid, rooms [(id, nombre, tipo, suelo)], map_name, params {min_x, min_y, res},
+    pose (base) / robot {x, y, angle} en metros, zones [{type, name, points}], house."""
     grid = info["grid"]
-    if not grid or len(grid) < GRID_W * GRID_H:
+    if not grid or len(grid) < W * H:
         raise ValueError("rejilla de mapa incompleta")
     meta = {rid: (n, t, mat) for rid, n, t, mat in info["rooms"] if rid is not None}
     names = {rid: v[0] for rid, v in meta.items()}
@@ -306,8 +313,7 @@ def decode_map(frame: bytes) -> dict:
     minx = miny = 10 ** 9
     maxx = maxy = -1
     rp = {}   # id -> [minx,miny,maxx,maxy,count,sumx,sumy]
-    W = GRID_W
-    for y in range(GRID_H):
+    for y in range(H):
         row = grid[y * W:(y + 1) * W]
         if not any(row):
             continue
@@ -391,7 +397,7 @@ def decode_map(frame: bytes) -> dict:
     return {
         "robot_world": robot_world,
         "name": info["map_name"] or "Interior",
-        "grid_size": [GRID_W, GRID_H],
+        "grid_size": [W, H],
         "bbox": [minx, miny, w, h],
         "cells_b64": base64.b64encode(bytes(cropped)).decode(),
         "rooms": rooms,

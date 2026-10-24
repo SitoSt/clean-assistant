@@ -1,7 +1,7 @@
 name: "Clean Assistant"
-version: "0.24.3"
+version: "0.25.0"
 slug: "clean_assistant"
-description: "Local (no-cloud) control for Cecotec Conga (8090 / 6090 / 7090 / 4690 / 9090 Ultra and more): live map, room cleaning, zones, schedules, MQTT & Home Assistant."
+description: "Local (no-cloud) control for Cecotec Conga (8090 / 6090 / 7090 / 4690 / 9090 Ultra and more; 3090/4090 experimental): live map, room cleaning, zones, schedules, MQTT & Home Assistant."
 url: "https://github.com/miguelsg29/clean-assistant"
 # Imagen PRECOMPILADA (GitHub Actions -> GHCR). Con esto Home Assistant DESCARGA la imagen en vez
 # de compilarla en el dispositivo: actualizaciones rápidas y con barra de progreso. La publica el
@@ -21,17 +21,22 @@ ingress_port: 8099
 panel_icon: "mdi:robot-vacuum"
 # El robot se conecta a estos puertos (redirige por DNS los dominios de Cecotec a HA):
 #   9090 = control; 8001 = OTA (independencia de la nube); 8002/8006 = subida de historial.
+#   4010/4030/4050 = solo con BACKEND "legacy" (generación 3xxx/4xxx: Conga 4090…).
 ports:
   9090/tcp: 9090
   8001/tcp: 8001
   8002/tcp: 8002
   8006/tcp: 8006
+  4010/tcp: 4010
+  4030/tcp: 4030
+  4050/tcp: 4050
 # Descubrimiento del broker MQTT de Home Assistant (Mosquitto): si no rellenas los
 # campos MQTT_* a mano, se autoconfiguran desde HA. "want" = opcional (la app funciona
 # igual sin MQTT).
 services:
   - mqtt:want
 options:
+  BACKEND: "new"
   ROBOT_DID: 0
   ROBOT_USERID: 0
   ROBOT_SN: "PON_AQUI_EL_SN_DE_TU_ROBOT"
@@ -47,6 +52,7 @@ options:
   DEFAULT_WATER: "Medio"
   DEFAULT_MOP: "Estándar"
 schema:
+  BACKEND: list(new|legacy)
   ROBOT_DID: int
   ROBOT_USERID: int
   ROBOT_SN: str

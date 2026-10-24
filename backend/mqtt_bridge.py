@@ -115,6 +115,8 @@ class MqttBridge:
     def _model_names(self):
         """(nombre, modelo) del dispositivo para HA según el project_type del robot. Para modelos
         no mapeados usa un nombre genérico 'Conga' e incluye el project_type crudo en el modelo."""
+        if getattr(self.robot, "legacy", False):   # gen. 3xxx/4xxx: no reporta project_type
+            return ("Conga", "Conga 3xxx/4xxx (legacy)")
         pt = (getattr(getattr(self.robot, "cfg", None), "project_type", "") or "").strip()
         if pt in CONGA_MODELS:
             return CONGA_MODELS[pt]
