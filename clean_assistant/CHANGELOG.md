@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.27.0
+- **Estadísticas totales en la Actividad** (todos los modelos): «Limpiezas en total: N · m² · tiempo»,
+  sumando el propio historial (como las estadísticas totales de Valetudo).
+- **Conga antiguos (backend `legacy`): cuatro funciones que ya tenía Congatudo**, portadas de `@agnoc/core`:
+  - **Ir aquí**: nuevo botón en la barra; tocas un punto del mapa y el robot va y limpia esa zona.
+  - **Reiniciar mapa** (Ajustes → Mapas de la casa): el robot borra el mapa y crea uno nuevo en la
+    siguiente limpieza.
+  - **Mapa nuevo pendiente**: cuando el robot termina un mapa nuevo, aparece un aviso sobre el mapa
+    para **guardarlo o descartarlo**.
+  - **Mapa persistente** (Ajustes → Robot): activar o desactivar que el robot guarde el mapa.
+  - Además, **la red WiFi del robot** (nombre e IP) en Ajustes → Configuración de red.
+- Legacy: se oculta el título «Modo de funcionamiento», que quedaba suelto.
+
 ## 0.26.1
 - **Conga antiguos (backend `legacy`): la interfaz ya no muestra lo que no aplica a esa generación.**
   - Instrucciones de DNS (Ajustes y asistente de primer arranque) con los dominios correctos:

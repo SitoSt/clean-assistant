@@ -239,6 +239,10 @@
   .wizdns{display:flex;flex-direction:column;gap:6px;margin:8px 0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
   /* backend legacy (Conga 3xxx/4xxx): oculta lo que no existe en esa generación */
   body.legacy .nolegacy,body.legacy .mDel{display:none!important}
+  body:not(.legacy) .onlylegacy{display:none!important}
+  .mapnote{position:absolute;left:50%;transform:translateX(-50%);bottom:96px;z-index:5;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;width:max-content;max-width:calc(100% - 32px);padding:8px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 20px rgba(0,0,0,.12);font-size:12.5px}
+  .mapnote[hidden]{display:none}
+  .mapnote .btn{width:auto;padding:5px 12px;font-size:12px}
   .wizdns-row{display:flex;align-items:center;gap:10px}
   .wizdns-k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);width:66px;flex:0 0 auto}
   .wizdns code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;-webkit-user-select:all;user-select:all;cursor:pointer;word-break:break-all}
@@ -332,6 +336,8 @@
   <div class="stage">
     <section class="card mapcard">
       <div class="maphead"><span class="chiplbl mtitle" id="mapTitle">—</span><span class="mapsub"><span class="chiplbl" id="mapState"></span><span class="chiplbl" id="mapStats"></span><span class="chiplbl warn" id="mapWarn"></span></span></div>
+      <div class="mapnote onlylegacy" id="pendMap" hidden><span>El robot tiene un mapa nuevo sin guardar.</span><button class="btn" id="pendSave">Guardar</button><button class="btn ghost" id="pendDrop">Descartar</button></div>
+      <div class="mapnote onlylegacy" id="gotoNote" hidden><span>Toca en el mapa el punto al que quieres enviar el robot.</span><button class="btn ghost" id="gotoCancel">Cancelar</button></div>
       <div class="mapctl">
         <button class="iconbtn" id="rotL" title="Girar 90° a la izquierda" aria-label="Girar izquierda">↺</button>
         <button class="iconbtn" id="rotR" title="Girar 90° a la derecha" aria-label="Girar derecha">↻</button>
@@ -384,6 +390,7 @@
         <button class="dbtn" id="homeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>Base</button>
         <button class="dbtn" id="locBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 0 1 16 0M7 12a5 5 0 0 1 10 0M11 12a1 1 0 0 1 2 0"/></svg>Localizar</button>
         <button class="dbtn" id="manBtn" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/><circle cx="12" cy="12" r="2.4"/></svg>Manual</button>
+        <button class="dbtn onlylegacy" id="gotoBtn" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg>Ir aquí</button>
       </div>
       <div class="dpad" id="dpad" hidden role="group" aria-label="Control manual">
         <button class="dkey" data-dir="up" aria-label="Adelante">▲</button>
@@ -485,11 +492,12 @@
         <div class="phead" style="display:flex;align-items:center">Registro de actividad
           <button class="btn ghost" id="histClear" style="margin-left:auto;padding:6px 12px;font-size:12px">Vaciar</button></div>
         <p class="hint" style="opacity:.65;font-size:11.5px;margin:0 0 8px">Cada limpieza que hace el robot: tipo (manual/programada), habitaciones, m², duración, día y hora.</p>
+        <p class="hint" id="histTotal" style="font-size:12px;font-weight:560;margin:0 0 8px" hidden></p>
         <div id="histList"></div>
       </div>
 
       <div class="tabpane" data-pane="ajustes">
-        <div class="phead">Modo de funcionamiento</div>
+        <div class="phead nolegacy">Modo de funcionamiento</div>
         <div class="seg nolegacy" id="linkSeg"><button data-v="local" aria-pressed="true">Local</button><button data-v="cloud">Cloud + Local</button></div>
         <p class="hint nolegacy" style="opacity:.65;font-size:11.5px;margin:6px 0 2px">Local: sin nube (la app de Cecotec no llega al robot). Cloud + Local: el robot pasa por la nube real, la app oficial funciona y se capturan sus comandos (útil para depurar).</p>
 
@@ -503,6 +511,7 @@
           <p class="hint" data-i18n-html="net_local_extra" style="opacity:.7;font-size:11.5px;margin:8px 0 4px">Con ese dominio, Clean Assistant ya <b>controla</b> el robot. Para que sea <b>100&nbsp;% local</b> (que siga funcionando aunque Cecotec apague sus servidores), redirige <b>también</b> estos a la <b>misma IP</b>:</p>
           <div class="wizdns" id="netHostsExtra"></div>
           <div class="wizconn" id="netConn" style="margin-top:8px">…</div>
+          <p class="hint onlylegacy" id="robotWifi" style="opacity:.7;font-size:11.5px;margin:6px 0 2px"></p>
         </details>
 
         <details class="netcfg" id="backupCfg">
@@ -526,6 +535,8 @@
           <div class="btnrow"><button class="btn" id="nmCreate">Crear y mapear</button><button class="btn ghost" id="nmCancel">Cancelar</button></div>
         </div>
 
+        <div class="btnrow onlylegacy"><button class="btn ghost" id="resetMapBtn" style="color:var(--critical)">Reiniciar mapa</button></div>
+
         <div class="phead">Robot</div>
         <div class="row"><div class="rt"><div class="t">No molestar</div><div class="d" id="quietDesc">—</div></div><button class="toggle" id="quietTog"></button></div>
         <div class="field" style="margin-top:2px"><label>Franja de silencio (inicio – fin)</label>
@@ -533,6 +544,7 @@
         <div class="row"><div class="rt"><div class="t">Sonido</div></div><button class="toggle" id="voiceTog"></button></div>
         <div class="field" style="margin-top:4px"><label>Volumen</label><div class="slider"><input type="range" min="0" max="10" value="7" id="vol" aria-label="Volumen"/><span class="v" id="volv">7</span></div></div>
         <div class="row"><div class="rt"><div class="t">Turbo en alfombras</div><div class="d">Sube potencia al detectar alfombra</div></div><button class="toggle" id="carpetTog" aria-pressed="true"></button></div>
+        <div class="row onlylegacy"><div class="rt"><div class="t">Mapa persistente</div><div class="d">El robot guarda el mapa y lo reutiliza en cada limpieza</div></div><button class="toggle" id="persistTog"></button></div>
         <div class="row"><div class="rt"><div class="t">Actualizaciones automáticas</div><div class="d">Recomendado desactivar en local</div></div><button class="toggle" id="otaTog"></button></div>
         <div class="phead">Base</div>
         <div class="field"><label>Tipo de base</label><div class="seg" data-cmd="base_type"><button data-v="Base de carga">Base de carga</button><button data-v="Colector automático" aria-pressed="true">Colector automático</button></div></div>
@@ -894,6 +906,19 @@
   "¡copiado!":{en:"copied!",pt:"copiado!",fr:"copié !",pl:"skopiowano!",de:"kopiert!",it:"copiato!",nl:"gekopieerd!",ca:"copiat!"},
   "OTA (arranque)":{en:"OTA (boot)",pt:"OTA (arranque)",fr:"OTA (démarrage)",pl:"OTA (rozruch)",de:"OTA (Start)",it:"OTA (avvio)",nl:"OTA (opstart)",ca:"OTA (arrencada)"},
   "nube Cecotec":{en:"Cecotec cloud",pt:"nuvem Cecotec",fr:"cloud Cecotec",pl:"chmura Cecotec",de:"Cecotec-Cloud",it:"cloud Cecotec",nl:"Cecotec-cloud",ca:"núvol Cecotec"},
+  "El robot tiene un mapa nuevo sin guardar.":{en:"The robot has a new unsaved map.",pt:"O robô tem um mapa novo por guardar.",fr:"Le robot a une nouvelle carte non enregistrée.",pl:"Robot ma nową, niezapisaną mapę.",de:"Der Roboter hat eine neue, nicht gespeicherte Karte.",it:"Il robot ha una nuova mappa non salvata.",nl:"De robot heeft een nieuwe, niet-opgeslagen kaart.",ca:"El robot té un mapa nou sense desar."},
+  "Guardar":{en:"Save",pt:"Guardar",fr:"Enregistrer",pl:"Zapisz",de:"Speichern",it:"Salva",nl:"Opslaan",ca:"Desa"},
+  "Descartar":{en:"Discard",pt:"Descartar",fr:"Ignorer",pl:"Odrzuć",de:"Verwerfen",it:"Scarta",nl:"Verwerpen",ca:"Descarta"},
+  "Toca en el mapa el punto al que quieres enviar el robot.":{en:"Tap the spot on the map where you want to send the robot.",pt:"Toque no mapa o ponto para onde quer enviar o robô.",fr:"Touchez sur la carte l'endroit où envoyer le robot.",pl:"Dotknij na mapie miejsca, do którego chcesz wysłać robota.",de:"Tippe auf der Karte auf die Stelle, zu der der Roboter fahren soll.",it:"Tocca sulla mappa il punto in cui vuoi mandare il robot.",nl:"Tik op de kaart op de plek waar je de robot heen wilt sturen.",ca:"Toca al mapa el punt on vols enviar el robot."},
+  "Ir aquí":{en:"Go here",pt:"Ir aqui",fr:"Aller ici",pl:"Jedź tutaj",de:"Hierhin",it:"Vai qui",nl:"Ga hierheen",ca:"Anar-hi"},
+  "Reiniciar mapa":{en:"Reset map",pt:"Reiniciar mapa",fr:"Réinitialiser la carte",pl:"Zresetuj mapę",de:"Karte zurücksetzen",it:"Reimposta mappa",nl:"Kaart resetten",ca:"Reinicia el mapa"},
+  "Mapa persistente":{en:"Persistent map",pt:"Mapa persistente",fr:"Carte persistante",pl:"Trwała mapa",de:"Dauerhafte Karte",it:"Mappa persistente",nl:"Blijvende kaart",ca:"Mapa persistent"},
+  "El robot guarda el mapa y lo reutiliza en cada limpieza":{en:"The robot keeps the map and reuses it on every clean",pt:"O robô guarda o mapa e reutiliza-o em cada limpeza",fr:"Le robot garde la carte et la réutilise à chaque nettoyage",pl:"Robot zachowuje mapę i używa jej przy każdym sprzątaniu",de:"Der Roboter behält die Karte und nutzt sie bei jeder Reinigung",it:"Il robot conserva la mappa e la riutilizza a ogni pulizia",nl:"De robot bewaart de kaart en gebruikt die bij elke schoonmaak",ca:"El robot desa el mapa i el reutilitza a cada neteja"},
+  "Red WiFi del robot: {ssid} · IP {ip}":{en:"Robot Wi-Fi network: {ssid} · IP {ip}",pt:"Rede Wi-Fi do robô: {ssid} · IP {ip}",fr:"Réseau Wi-Fi du robot : {ssid} · IP {ip}",pl:"Sieć Wi-Fi robota: {ssid} · IP {ip}",de:"WLAN des Roboters: {ssid} · IP {ip}",it:"Rete Wi-Fi del robot: {ssid} · IP {ip}",nl:"Wifi-netwerk van de robot: {ssid} · IP {ip}",ca:"Xarxa Wi-Fi del robot: {ssid} · IP {ip}"},
+  "¿Descartar el mapa nuevo? El robot seguirá con el que tenía.":{en:"Discard the new map? The robot will keep the one it had.",pt:"Descartar o mapa novo? O robô continuará com o que tinha.",fr:"Ignorer la nouvelle carte ? Le robot gardera l'ancienne.",pl:"Odrzucić nową mapę? Robot zachowa poprzednią.",de:"Neue Karte verwerfen? Der Roboter behält die bisherige.",it:"Scartare la nuova mappa? Il robot terrà quella che aveva.",nl:"Nieuwe kaart verwerpen? De robot houdt de kaart die hij had.",ca:"Descartar el mapa nou? El robot continuarà amb el que tenia."},
+  "¿Reiniciar el mapa? El robot borrará el mapa actual (habitaciones y paredes virtuales) y creará uno nuevo en la próxima limpieza.":{en:"Reset the map? The robot will erase the current map (rooms and virtual walls) and build a new one on its next clean.",pt:"Reiniciar o mapa? O robô apagará o mapa atual (divisões e paredes virtuais) e criará um novo na próxima limpeza.",fr:"Réinitialiser la carte ? Le robot effacera la carte actuelle (pièces et murs virtuels) et en créera une nouvelle au prochain nettoyage.",pl:"Zresetować mapę? Robot usunie obecną mapę (pomieszczenia i wirtualne ściany) i utworzy nową przy następnym sprzątaniu.",de:"Karte zurücksetzen? Der Roboter löscht die aktuelle Karte (Räume und virtuelle Wände) und erstellt bei der nächsten Reinigung eine neue.",it:"Reimpostare la mappa? Il robot cancellerà la mappa attuale (stanze e muri virtuali) e ne creerà una nuova alla prossima pulizia.",nl:"Kaart resetten? De robot wist de huidige kaart (kamers en virtuele muren) en maakt bij de volgende schoonmaak een nieuwe.",ca:"Reiniciar el mapa? El robot esborrarà el mapa actual (habitacions i parets virtuals) i en crearà un de nou a la propera neteja."},
+  "¿Enviar el robot a este punto? Irá allí y limpiará esa zona.":{en:"Send the robot to this spot? It will go there and clean that area.",pt:"Enviar o robô para este ponto? Vai até lá e limpa essa zona.",fr:"Envoyer le robot à cet endroit ? Il ira y nettoyer cette zone.",pl:"Wysłać robota w to miejsce? Pojedzie tam i posprząta ten obszar.",de:"Roboter zu dieser Stelle schicken? Er fährt hin und reinigt diesen Bereich.",it:"Mandare il robot in questo punto? Ci andrà e pulirà quella zona.",nl:"Robot naar deze plek sturen? Hij rijdt erheen en maakt dat gebied schoon.",ca:"Enviar el robot a aquest punt? Hi anirà i netejarà aquella zona."},
+  "Limpiezas en total: {n} · {area} m² · {time}":{en:"Total cleanings: {n} · {area} m² · {time}",pt:"Limpezas no total: {n} · {area} m² · {time}",fr:"Nettoyages au total : {n} · {area} m² · {time}",pl:"Łącznie sprzątań: {n} · {area} m² · {time}",de:"Reinigungen insgesamt: {n} · {area} m² · {time}",it:"Pulizie in totale: {n} · {area} m² · {time}",nl:"Schoonmaakbeurten in totaal: {n} · {area} m² · {time}",ca:"Neteges en total: {n} · {area} m² · {time}"},
   "historial":{en:"history",pt:"histórico",fr:"historique",pl:"historia",de:"Verlauf",it:"cronologia",nl:"geschiedenis",ca:"historial"},
   "Iniciando…":{en:"Starting…",pt:"A iniciar…",fr:"Démarrage…",pl:"Uruchamianie…",de:"Wird gestartet…",it:"Avvio…",nl:"Starten…",ca:"Iniciant…"},
   "No se pudo exportar.":{en:"Could not export.",pt:"Não foi possível exportar.",fr:"Échec de l’exportation.",pl:"Nie udało się wyeksportować.",de:"Export fehlgeschlagen.",it:"Impossibile esportare.",nl:"Exporteren mislukt.",ca:"No s'ha pogut exportar."},
@@ -1195,6 +1220,11 @@
       if(typeof paintVol==='function')paintVol();}
     if(st.auto_upgrade!=null)document.getElementById('otaTog').setAttribute('aria-pressed',!!st.auto_upgrade);
     if(st.consumables)renderCons(st.consumables);
+    // solo gen. legacy (3xxx/4xxx): mapa nuevo pendiente, mapa persistente y WiFi del robot
+    document.getElementById('pendMap').hidden=!st.pending_map;
+    if(st.persistent_map!=null)document.getElementById('persistTog').setAttribute('aria-pressed',!!st.persistent_map);
+    var rw=document.getElementById('robotWifi');
+    if(rw)rw.textContent=(st.wifi&&st.wifi.ssid)?t('Red WiFi del robot: {ssid} · IP {ip}',{ssid:st.wifi.ssid,ip:st.wifi.ip||'—'}):'';
   }
   // vida de cada consumible EN HORAS (el robot reporta horas de uso; confirmado con la app)
   var CONS={main_brush:{n:'Cepillo central',max:300},side_brush:{n:'Cepillo lateral',max:220},
@@ -1297,6 +1327,19 @@
   wireToggle('voiceTog',function(on){api('voice',{on:on,volume:+document.getElementById('vol').value});});
   wireToggle('otaTog',function(on){api('ota',{value:on});});
   wireToggle('carpetTog',function(on){api('carpet_turbo',{value:on});});
+  wireToggle('persistTog',function(on){api('persistent_map',{value:on});});
+  // ---- solo gen. legacy: mapa nuevo pendiente, reiniciar mapa e "ir aquí" (como Congatudo) ----
+  document.getElementById('pendSave').addEventListener('click',function(){ document.getElementById('pendMap').hidden=true; api('pending_map',{save:true}); });
+  document.getElementById('pendDrop').addEventListener('click',async function(){
+    if(await uiConfirm(t('¿Descartar el mapa nuevo? El robot seguirá con el que tenía.'))){ document.getElementById('pendMap').hidden=true; api('pending_map',{save:false}); }
+  });
+  document.getElementById('resetMapBtn').addEventListener('click',async function(){
+    if(await uiConfirm(t('¿Reiniciar el mapa? El robot borrará el mapa actual (habitaciones y paredes virtuales) y creará uno nuevo en la próxima limpieza.'))) api('reset_map');
+  });
+  var gotoArm=false;
+  function setGoto(on){ gotoArm=on; document.getElementById('gotoBtn').setAttribute('aria-pressed',on?'true':'false'); document.getElementById('gotoNote').hidden=!on; }
+  document.getElementById('gotoBtn').addEventListener('click',function(){ if(!gotoArm){ exitDraw(); exitRoomEdit(); } setGoto(!gotoArm); });
+  document.getElementById('gotoCancel').addEventListener('click',function(){ setGoto(false); });
   var twiceOn=false;   // doble pasada para "Limpiar selección" (modo x2)
   wireToggle('twiceTog',function(on){twiceOn=on;api('twice',{value:on});});
   function hm2min(s){var p=String(s||'0:0').split(':');return (+p[0])*60+(+p[1]);}
@@ -1860,6 +1903,12 @@
     var c=evtCell(e), x=Math.floor(c[0]), y=Math.floor(c[1]), w=MAP.bbox[2];
     var v=(x>=0&&y>=0&&x<w&&y<MAP.bbox[3])?CELLS[y*w+x]:0;
     if(roomEdit==='merge'){ if(v>1&&v!==255)mergeTap(v); return; }
+    if(gotoArm){                                         // "Ir aquí" (solo gen. legacy)
+      var wpt=cellToWorld(c[0],c[1]); setGoto(false);
+      uiConfirm(t('¿Enviar el robot a este punto? Irá allí y limpiará esa zona.')).then(function(ok){
+        if(ok) api('goto',{x:wpt[0],y:wpt[1]}); });
+      return;
+    }
     // sin modo: doble toque = zoom; toque simple (diferido 240ms) = seleccionar habitación
     var tapC=_wrapXY(e);
     if(_tapTimer){ clearTimeout(_tapTimer); _tapTimer=null;
@@ -2101,6 +2150,14 @@
   var HISTORY=[];
   function renderHistory(){
     var el=document.getElementById('histList'); if(!el)return; el.innerHTML='';
+    // estadísticas totales (como TotalStatistics de Valetudo), sumando el propio historial
+    var tot=document.getElementById('histTotal'), cl=HISTORY.filter(function(h){return h.kind!=='fault';});
+    if(tot){
+      var ar=cl.reduce(function(s,h){return s+(+h.area||0);},0), mn=cl.reduce(function(s,h){return s+(+h.duration||0);},0);
+      tot.hidden=!cl.length;
+      tot.textContent=t('Limpiezas en total: {n} · {area} m² · {time}',{n:cl.length,area:Math.round(ar*10)/10,
+        time:(mn>=60?Math.floor(mn/60)+' h '+(mn%60)+' min':mn+' min')});
+    }
     if(!HISTORY.length){ el.innerHTML='<p class="hint" style="opacity:.6;margin:2px 0 12px">'+t('Aún no hay limpiezas registradas.')+'</p>'; return; }
     HISTORY.forEach(function(h){
       var d=document.createElement('div'); d.className='hrow';

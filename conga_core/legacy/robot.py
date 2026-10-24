@@ -41,6 +41,7 @@ _PAUSED = {4, 9, 26, 31, 37}
 _CLEANING = {1, 6, 7, 11, 20, 25, 30, 36}
 _MANUAL = {2}
 _ZONE_MODES = {30, 31, 32, 35}  # workMode en modo zona (device-mode.mapper)
+_SPOT_MODES = {7, 9, 12, 14}    # workMode en modo punto
 ROOM_PLAN_ID = 2                # plan que usan @agnoc y la app para limpiar por habitaciones
 
 
@@ -221,9 +222,21 @@ class LegacyRobot:
             return self._request_map()
         elif c == "lock_device":
             return self._send("DEVICE_CONTROL_LOCK_REQ", {})
-        elif c == "setSaveMap":                            # guardar el mapa nuevo pendiente
+        elif c == "setSaveMap":                            # guardar/descartar el mapa nuevo pendiente
+            self.state.pending_map = False
+            self._notify()
             return self._send("DEVICE_MAPID_SET_SAVEWAITINGMAP_INFO_REQ",
                               {1: 1 if control.get("isSave", 1) else 0})
+        elif c == "legacy_goto":                           # ir a un punto (GoToLocation de Congatudo)
+            return self._in_background(self._goto, float(control["x"]), float(control["y"]))
+        elif c == "legacy_reset_map":                      # reiniciar el mapa (MapReset de Congatudo)
+            return self._in_background(self._reset_map)
+        elif c == "legacy_persistent_map":                 # mapa persistente (historyMap)
+            on = bool(control["value"])
+            self.state.persistent_map = on
+            r = self._send("USER_SET_DEVICE_CLEANPREFERENCE_REQ", {5: on})
+            self._request_map()
+            return r
         elif c == "mergeRoom":                             # unir habitaciones (joinRooms)
             ids = [int(r) for r in control.get("roomsId") or []]
             data = bytes([1, len(ids)] + ids)
@@ -319,6 +332,28 @@ class LegacyRobot:
         self._send_recv("DEVICE_MAPID_SET_ARRANGEROOM_INFO_REQ",
                         {1: head["map_head_id"], 2: typ, 3: len(data), 4: data, 5: room_id},
                         "DEVICE_MAPID_SET_ARRANGEROOM_INFO_RSP")
+        self._request_map()
+
+    def _goto(self, x: float, y: float):
+        """Como cleanPosition de @agnoc (GoToLocation de Congatudo): pasar a modo punto y
+        mandar el destino en metros. El robot va y limpia esa zona."""
+        head = self._lmap.get("head")
+        if not head:
+            self.log("  [legacy] ir a un punto: aún no hay mapa")
+            return
+        if self.state.work_mode not in _SPOT_MODES:          # setMode(SPOT)
+            self._send_recv("DEVICE_MAPID_GET_GLOBAL_INFO_REQ", {1: 0x78FF | 0x200},
+                            "DEVICE_MAPID_GET_GLOBAL_INFO_RSP")
+            self._wait_for(lambda: self.state.work_mode in _SPOT_MODES, 5.0)
+        self._send_recv("DEVICE_MAPID_SET_NAVIGATION_REQ",
+                        {1: head["map_head_id"], 2: x, 3: y, 4: 0.0, 5: CTRL_START},
+                        "DEVICE_MAPID_SET_NAVIGATION_RSP")
+
+    def _reset_map(self):
+        """Como resetMap de @agnoc (MapReset de Congatudo): borra el mapa del robot; hará uno
+        nuevo en la siguiente limpieza y avisará para guardarlo (pending_map)."""
+        self._send_recv("DEVICE_MAPID_SET_HISTORY_MAP_ENABLE_REQ", {},
+                        "DEVICE_MAPID_SET_HISTORY_MAP_ENABLE_RSP")
         self._request_map()
 
     def _clean_zones(self, zones: list):
@@ -508,6 +543,7 @@ class LegacyRobot:
         self._send("DEVICE_GETTIME_REQ", {})
         self._request_map()
         self._send("DEVICE_MAPID_GET_CONSUMABLES_PARAM_REQ", {})
+        self._send("DEVICE_WLAN_INFO_GETTING_REQ", {})
 
     def _request_map(self) -> dict:
         """Pide el mapa completo (llega por 4030 como GET_GLOBAL_INFO_RSP), con la misma
@@ -594,6 +630,13 @@ class LegacyRobot:
             self._lmap["charger"] = mapdecode.decode_charge_position(pkt.payload)
         elif op == "DEVICE_MAPID_PUSH_HAS_WAITING_BE_SAVED":
             self.log("  [legacy] el robot tiene un mapa nuevo pendiente de guardar")
+            self.state.pending_map = True
+            self._notify()
+        elif op == "DEVICE_WLAN_INFO_GETTING_RSP":       # red del robot (solo lectura)
+            body = pb.decode(pb.first(f, 3, b""))
+            self.state.wifi = {"ssid": pb.as_str(pb.first(body, 2, b"")),
+                               "ip": pb.as_str(pb.first(body, 1, b""))}
+            self._notify()
         elif op.endswith("_RSP"):
             pass                       # respuestas a nuestras peticiones
         elif op not in self._unhandled:
@@ -632,6 +675,9 @@ class LegacyRobot:
         """PUSH_DEVICE_AGENT_SETTING_REQ: voz (campo 2) y horario silencioso (campo 7)."""
         voice = pb.decode(pb.first(f, 2, b""))
         quiet = pb.decode(pb.first(f, 7, b""))
+        pref = pb.decode(pb.first(f, 3, b""))           # cleanPreference: 5 = historyMap
+        if 5 in pref:
+            self.state.persistent_map = bool(pb.first(pref, 5))
         if voice:
             self.state.voice = {"voiceMode": int(pb.first(voice, 1, 1)),
                                 "volume": max(0, int(pb.first(voice, 2, 11)) - 1)}   # 1..11 -> 0..10

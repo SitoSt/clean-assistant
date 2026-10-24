@@ -326,7 +326,9 @@ tested live on a robot yet, hence **experimental** — feedback is very welcome.
 cleaning path and virtual walls · start / pause / resume / return to dock / locate ·
 suction and water · room cleaning · zone cleaning · virtual walls · manual control ·
 voice, quiet hours, carpet boost, double pass · consumables · history · **schedules** ·
-rename, merge and split rooms · the robot's maps in the map list.
+rename, merge and split rooms · the robot's maps in the map list · **go to a spot**
+(tap the map) · **reset the map** and save or discard the new one · persistent map on/off ·
+the robot's Wi-Fi network.
 
 **Schedules work differently here:** that generation ties each schedule to a shared room
 *plan* on the robot, which can't express Clean Assistant's per-room schedules. So
@@ -334,7 +336,7 @@ rename, merge and split rooms · the robot's maps in the map list.
 (they show up as *Scheduled* in the history). Home Assistant has to be running for them to
 fire.
 
-**Not yet:** creating a new map and deleting maps. "No-mop" zones don't exist in that
+**Not yet:** deleting maps. "No-mop" zones don't exist in that
 generation, and the history can't list which rooms were cleaned (the robot doesn't report
 the current room). Home Assistant shows it as **"Conga 3xxx/4xxx (legacy)"**.
 
