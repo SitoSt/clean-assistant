@@ -324,9 +324,18 @@ ha probado en vivo con un robot, por eso es **experimental** — se agradece muc
 **Implementado:** estado, batería y avisos · mapa en vivo con habitaciones, posición del robot,
 base, recorrido y paredes virtuales · iniciar / pausar / reanudar / volver a la base / localizar ·
 succión y agua · limpieza por habitaciones · limpieza por zonas · paredes virtuales · control
-manual · voz, horario silencioso, turbo en alfombras, doble pasada · consumibles · historial.
-**Aún no:** horarios y gestión de varios mapas. Las zonas "sin fregona" no existen en esa
-generación. Home Assistant lo muestra como **"Conga 3xxx/4xxx (legacy)"**.
+manual · voz, horario silencioso, turbo en alfombras, doble pasada · consumibles · historial ·
+**horarios** · renombrar, unir y dividir habitaciones · los mapas del robot en la lista de mapas.
+
+**Los horarios funcionan distinto:** esa generación liga cada horario a un *plan* de
+habitaciones compartido en el robot, que no permite los horarios por habitación de Clean
+Assistant. Por eso **los ejecuta el propio Clean Assistant** a su hora, con la misma limpieza
+por habitaciones que "Ejecutar ahora" (salen como *Programada* en el historial). Home Assistant
+tiene que estar encendido para que salten.
+
+**Aún no:** crear un mapa nuevo y borrar mapas. Las zonas "sin fregona" no existen en esa
+generación, y el historial no puede listar qué habitaciones se limpiaron (el robot no informa
+de la habitación en curso). Home Assistant lo muestra como **"Conga 3xxx/4xxx (legacy)"**.
 
 ## Apoyar el proyecto
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.26.0
+- **Conga antiguos (backend `legacy`, experimental): horarios.** Esa generación liga cada horario
+  a un «plan» de habitaciones compartido en el robot, que no permite los horarios por habitación
+  de CA; por eso **los ejecuta Clean Assistant a su hora**, con la misma limpieza por habitaciones
+  que «Ejecutar ahora» (validada contra el 4090 real). Salen como «Programada» en el historial.
+  Necesita Home Assistant encendido.
+- **Legacy: habitaciones y mapas**: renombrar, unir y dividir habitaciones; los mapas guardados en
+  el robot aparecen en la lista de mapas y se pueden activar. Aún no: crear un mapa nuevo ni
+  borrar mapas (sin referencia fiable del protocolo).
+- **Legacy: arreglo de una carrera al conectar**: si el canal del mapa (4030) se registraba antes
+  que el de comandos (4010), las órdenes salían por el del mapa. Ahora van siempre por el 4010,
+  como hace Congatudo en la captura real.
+
 ## 0.25.0
 - **Nuevo: soporte EXPERIMENTAL para los Conga antiguos (3090 / 3490 / 4090)** mediante un segundo
   backend, `legacy` (issue #12, gracias a @mactron254). Esa generación habla otro protocolo de

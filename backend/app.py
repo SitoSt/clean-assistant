@@ -100,6 +100,8 @@ _new_map = {"pending": False, "moved": False}
 _last_active_id = [None]   # último mapa activo difundido (para no reenviar en cada frame)
 _session = [None]          # sesión de limpieza en curso (para el historial)
 _clean_trigger = {"ts": 0.0, "rooms": []}   # última orden de limpieza lanzada desde CA
+# gen. legacy: horarios que lanza CA a su hora (id del plan -> minuto lanzado; último lanzado)
+_legacy_sched = {"fired": {}, "last": None}
 _last_fault = [None]       # último faultCode registrado en el historial (para no repetir)
 
 # ------- valores por defecto de PRIMER ARRANQUE (solo instalación nueva) -------
@@ -371,6 +373,9 @@ _load_room_names()
 # ------- registro de actividad (historial de limpiezas) -------
 def _match_schedule(ts):
     """Nombre del horario del robot que cuadra con este momento (día+hora ±20 min), o None."""
+    if LEGACY:     # los horarios los lanza CA (_run_due_schedules_legacy), no el robot
+        last = _legacy_sched["last"]
+        return last["name"] if last and abs(ts - last["ts"]) <= 20 * 60 else None
     dt = datetime.datetime.fromtimestamp(ts)
     wd_bit = {0: 2, 1: 4, 2: 8, 3: 16, 4: 32, 5: 64, 6: 1}[dt.weekday()]   # bits del robot
     mins = dt.hour * 60 + dt.minute
@@ -742,6 +747,39 @@ async def _loop():
         robot.tick()
         await broadcast()
         mqtt.publish_state()
+        if LEGACY:
+            await _run_due_schedules_legacy()
+
+
+async def _run_due_schedules_legacy():
+    """Gen. legacy: CA lanza los horarios a su hora. El robot liga cada horario a un 'plan' de
+    habitaciones compartido, que no encaja con los horarios por habitación de CA; así se usa la
+    misma limpieza por habitaciones que 'Ejecutar ahora' (validada contra el robot real)."""
+    s = robot.state
+    if not s.online or s.state in ("cleaning", "paused", "returning", "mapping"):
+        return
+    now = datetime.datetime.now()
+    stamp = now.strftime("%Y-%m-%d %H:%M")
+    wd_bit = {0: 2, 1: 4, 2: 8, 3: 16, 4: 32, 5: 64, 6: 1}[now.weekday()]   # mismos bits que el robot
+    mins = now.hour * 60 + now.minute
+    for p in schedules.for_map(_active_map()):
+        if not p.get("enable", True) or _legacy_sched["fired"].get(p.get("id")) == stamp:
+            continue
+        try:
+            due = cmd._daytime(p.get("time", "")) == mins and cmd._weekday(p.get("days") or []) & wd_bit
+        except (ValueError, AttributeError):
+            continue
+        controls = run_controls(p) if due else []
+        if not controls:
+            continue
+        _legacy_sched["fired"][p.get("id")] = stamp
+        _legacy_sched["last"] = {"ts": time.time(), "name": p.get("name") or "Horario"}
+        print(f"[horarios] lanzo '{p.get('name')}' (gen. legacy: lo ejecuta Clean Assistant)")
+        for i, c in enumerate(controls):
+            robot.command(c)
+            if i < len(controls) - 1:
+                await asyncio.sleep(0.3)      # potencia/agua antes de limpiar (como schedule_run)
+        return                                # uno por minuto: el robot ya está ocupado
 
 
 # ------- auto-provisión LOCAL de la identidad del robot (sin nube ni datos guardados) -------
@@ -957,7 +995,7 @@ async def lifespan(app: FastAPI):
     mqtt.stop()
 
 
-app = FastAPI(title="Clean Assistant", version="0.25.0", lifespan=lifespan)
+app = FastAPI(title="Clean Assistant", version="0.26.0", lifespan=lifespan)
 
 
 @app.get("/api/state")

@@ -323,9 +323,18 @@ tested live on a robot yet, hence **experimental** — feedback is very welcome.
 **Implemented:** status, battery and warnings · live map with rooms, robot position, dock,
 cleaning path and virtual walls · start / pause / resume / return to dock / locate ·
 suction and water · room cleaning · zone cleaning · virtual walls · manual control ·
-voice, quiet hours, carpet boost, double pass · consumables · history.
-**Not yet:** schedules and multi-map management. "No-mop" zones don't exist in that
-generation. Home Assistant shows it as **"Conga 3xxx/4xxx (legacy)"**.
+voice, quiet hours, carpet boost, double pass · consumables · history · **schedules** ·
+rename, merge and split rooms · the robot's maps in the map list.
+
+**Schedules work differently here:** that generation ties each schedule to a shared room
+*plan* on the robot, which can't express Clean Assistant's per-room schedules. So
+**Clean Assistant runs them itself** at their time, with the same room cleaning as "Run now"
+(they show up as *Scheduled* in the history). Home Assistant has to be running for them to
+fire.
+
+**Not yet:** creating a new map and deleting maps. "No-mop" zones don't exist in that
+generation, and the history can't list which rooms were cleaned (the robot doesn't report
+the current room). Home Assistant shows it as **"Conga 3xxx/4xxx (legacy)"**.
 
 ## Support
 

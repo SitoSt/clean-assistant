@@ -13,6 +13,7 @@ ignora sin romper nada.
 from __future__ import annotations
 import random
 import socket
+import struct
 import threading
 import time
 
@@ -121,6 +122,7 @@ class LegacyRobot:
         self._diag = {"quiet": 0, "info": 0, "orders": 0}
         self._listeners = []
         self._waiters = {}             # opname de respuesta -> [Event] (para _send_recv)
+        self._kind = {}                # socket -> "cmd" | "map" (puerto por el que entró)
 
     # ---------------- interfaz común (como RealRobot) ----------------
     def start(self):
@@ -222,6 +224,27 @@ class LegacyRobot:
         elif c == "setSaveMap":                            # guardar el mapa nuevo pendiente
             return self._send("DEVICE_MAPID_SET_SAVEWAITINGMAP_INFO_REQ",
                               {1: 1 if control.get("isSave", 1) else 0})
+        elif c == "mergeRoom":                             # unir habitaciones (joinRooms)
+            ids = [int(r) for r in control.get("roomsId") or []]
+            data = bytes([1, len(ids)] + ids)
+            return self._in_background(self._arrange_rooms, 0, data, 0)
+        elif c == "splitRoom":                             # dividir con una línea (splitRoom)
+            data = bytes([1, 1, 2]) + struct.pack(
+                "<ffff", float(control["startX"]), float(control["startY"]),
+                float(control["endX"]), float(control["endY"]))
+            return self._in_background(self._arrange_rooms, 1, data, int(control["roomId"]))
+        elif c == "setPlanData6090":                       # renombrar habitaciones (updateRoom)
+            names = {int(r["roomID"]): r.get("roomName") or "" for r in control.get("roomInfo") or []}
+            return self._in_background(self._rename_rooms, names)
+        elif c == "selectMapPlan":
+            if int(control.get("type", 1)) == 1:           # activar un mapa
+                return self._send("DEVICE_MAPID_SELECT_MAP_PLAN_REQ",
+                                  {1: int(control["mapid"]), 2: ROOM_PLAN_ID, 3: 1})
+        elif c in ("setOrder6090", "deleteOrder6090"):
+            # gen. legacy: los horarios los ejecuta Clean Assistant a su hora (ver app.py,
+            # _run_due_schedules_legacy). El robot liga cada horario a un "plan" de habitaciones
+            # compartido, que no encaja con los horarios por habitación de CA.
+            return {"result": 0}
         self.log(f"  [legacy] comando '{c}' aún no soportado en la generación legacy")
         return {"ok": False, "error": f"'{c}' no soportado (legacy)"}
 
@@ -254,19 +277,49 @@ class LegacyRobot:
             self.log("  [legacy] limpiar habitaciones: aún no hay mapa con habitaciones")
             return
         mid = head["map_head_id"]
-        plan = next((p for p in L.get("plans") or [] if p["id"] == ROOM_PLAN_ID), {})
         self._send("USER_SET_DEVICE_CLEANPREFERENCE_REQ", {2: twice})
-        self._send_recv("DEVICE_MAPID_SET_PLAN_PARAMS_REQ", {
-            1: mid, 2: ROOM_PLAN_ID, 3: self.state.map_name or "Default",
-            4: plan.get("name") or "Default",
-            5: [{1: r["id"], 3: r["name"], 4: r["id"] in ids} for r in L["rooms"]],
-            6: self._area_info(mid, ROOM_PLAN_ID, self._walls_raw()),
-        }, "DEVICE_MAPID_SET_PLAN_PARAMS_RSP")
+        self._send_recv("DEVICE_MAPID_SET_PLAN_PARAMS_REQ",
+                        self._plan_rooms_req(mid, lambda rid: rid in ids),
+                        "DEVICE_MAPID_SET_PLAN_PARAMS_RSP")
         self._send_recv("DEVICE_MAPID_SELECT_MAP_PLAN_REQ", {1: mid, 2: ROOM_PLAN_ID, 3: 1},
                         "DEVICE_MAPID_SELECT_MAP_PLAN_RSP")
         self._send_recv("DEVICE_MAPID_GET_GLOBAL_INFO_REQ", {1: 0x78FF},
                         "DEVICE_MAPID_GET_GLOBAL_INFO_RSP")
         self._auto_clean(CTRL_START)
+
+    def _plan_rooms_req(self, mid: int, enable, names: dict | None = None) -> dict:
+        """DEVICE_MAPID_SET_PLAN_PARAMS_REQ del plan de habitaciones (mismo mensaje que manda
+        Congatudo, validado byte a byte). enable(room_id) -> bool; names: {id: nombre nuevo}."""
+        L = self._lmap
+        plan = next((p for p in L.get("plans") or [] if p["id"] == ROOM_PLAN_ID), {})
+        names = names or {}
+        return {
+            1: mid, 2: ROOM_PLAN_ID, 3: self.state.map_name or "Default",
+            4: plan.get("name") or "Default",
+            5: [{1: r["id"], 3: names.get(r["id"], r["name"]), 4: bool(enable(r["id"]))}
+                for r in L["rooms"]],
+            6: self._area_info(mid, ROOM_PLAN_ID, self._walls_raw()),
+        }
+
+    def _rename_rooms(self, names: dict):
+        """Como updateRoom de @agnoc: reescribe el plan con los nombres nuevos."""
+        head = self._lmap.get("head")
+        if not head or not self._lmap.get("rooms"):
+            return
+        self._send_recv("DEVICE_MAPID_SET_PLAN_PARAMS_REQ",
+                        self._plan_rooms_req(head["map_head_id"], lambda rid: True, names),
+                        "DEVICE_MAPID_SET_PLAN_PARAMS_RSP")
+        self._request_map()
+
+    def _arrange_rooms(self, typ: int, data: bytes, room_id: int):
+        """Unir (type 0) / dividir (type 1) habitaciones, como joinRooms/splitRoom de @agnoc."""
+        head = self._lmap.get("head")
+        if not head:
+            return
+        self._send_recv("DEVICE_MAPID_SET_ARRANGEROOM_INFO_REQ",
+                        {1: head["map_head_id"], 2: typ, 3: len(data), 4: data, 5: room_id},
+                        "DEVICE_MAPID_SET_ARRANGEROOM_INFO_RSP")
+        self._request_map()
 
     def _clean_zones(self, zones: list):
         """Como cleanAreas de @agnoc: pasar a modo zona, mandar las zonas y arrancar."""
@@ -340,9 +393,12 @@ class LegacyRobot:
         return self._send("DEVICE_AUTO_CLEAN_REQ", {1: ctrl, 2: CLEAN_TYPE_AUTO})
 
     def _send(self, opname: str, fields: dict) -> dict:
-        """Trama iniciada por nosotros, por la PRIMERA conexión (como el Multiplexer)."""
+        """Trama iniciada por nosotros, por la conexión de COMANDOS (4010), como hace Congatudo en
+        la captura real. Si aún no existe, por la primera que haya. (@agnoc usa siempre la primera
+        registrada, pero 4010 y 4030 llegan en paralelo y podría ganar la del mapa.)"""
         with self._lock:
-            sock = self._conns[0] if self._conns else None
+            sock = next((s for s in self._conns if self._kind.get(s) == "cmd"),
+                        self._conns[0] if self._conns else None)
             dev = self._device_id
         if not sock or dev is None:
             return {"ok": False, "error": "robot no conectado"}
@@ -374,6 +430,8 @@ class LegacyRobot:
                 threading.Thread(target=self._serve_rtc, args=(sock,), daemon=True).start()
             else:
                 self.log(f"[legacy] conexión {name} desde {addr[0]}")
+                with self._lock:
+                    self._kind[sock] = name
                 threading.Thread(target=self._serve, args=(name, sock), daemon=True).start()
 
     def _serve_rtc(self, sock):
@@ -427,6 +485,7 @@ class LegacyRobot:
         with self._lock:
             if sock in self._conns:
                 self._conns.remove(sock)
+            self._kind.pop(sock, None)
             empty = not self._conns
         if empty and self.state.online:
             self.state.online = False
@@ -659,7 +718,10 @@ class LegacyRobot:
             "pose": pose(L.get("charger")),
             "robot": pose(L.get("robot")),
             "zones": zones,
-            "house": None,
+            # mapas guardados en el robot (sección de planes): CA los lista como la "casa"
+            "house": {"id": None, "name": "",
+                      "maps": [{"id": m["map_head_id"], "name": m["name"]}
+                               for m in L.get("maps") or []]},
         }
 
     def _on_pose(self, p: dict):
