@@ -11,5 +11,9 @@ services:
     ports:
       - "8000:8000"   # interfaz web  -> http://este-host:8000
       - "9090:9090"   # servidor del robot (TLS + WebSocket)
+      # solo con CONGA_BACKEND=legacy (Conga 3090/3490/4090): comandos, mapa y hora
+      - "4010:4010"
+      - "4030:4030"
+      - "4050:4050"
     volumes:
       - ./data:/data  # certificados, mapa, zonas, horarios y vista (persistente)

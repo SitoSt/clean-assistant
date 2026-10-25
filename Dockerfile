@@ -26,6 +26,6 @@ ENV CERT_PATH=/data/cert.pem KEY_PATH=/data/key.pem
 VOLUME ["/data"]
 WORKDIR /data
 
-EXPOSE 8000 9090
+EXPOSE 8000 9090 4010 4030 4050
 CMD ["python", "-m", "uvicorn", "backend.app:app", "--app-dir", "/app", \
      "--host", "0.0.0.0", "--port", "8000"]

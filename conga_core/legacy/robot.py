@@ -43,6 +43,21 @@ _MANUAL = {2}
 _ZONE_MODES = {30, 31, 32, 35}  # workMode en modo zona (device-mode.mapper)
 _SPOT_MODES = {7, 9, 12, 14}    # workMode en modo punto
 ROOM_PLAN_ID = 2                # plan que usan @agnoc y la app para limpiar por habitaciones
+# DEVICE_SET_CLEAN_PREFERENCE (0x10D9) lleva succión Y agua en el mismo campo, por rangos
+# (captura de la app oficial, @mactron254; @agnoc los tiene AL REVÉS):
+#   succión 10 silencio, 11 estándar, 12 turbo, 13 máximo  |  agua 0 off, 1 bajo, 2 medio, 3 alto
+# CA (commands.FAN): Off(=«Máx» en la UI)=0, Eco=1, Normal=2, Turbo=3
+FAN_TO_ROBOT = {0: 13, 1: 10, 2: 11, 3: 12}
+# vida (horas) de cada consumible, la MISMA que usa la interfaz (index.html, CONS): el robot legacy
+# da el % de uso y CA trabaja en horas de uso
+CONSUMABLE_LIFE_H = {"main_brush": 300, "side_brush": 220, "filter": 100, "dishcloth": 160}
+# modos de limpieza con orden propia (captura de la app oficial): fregado 0x107D, esquinas/bordes
+# 0x1081 (no está en @agnoc). Mismo patrón que el automático: {1: 1 empezar / 2 pausa / 0 parar}.
+OP_MOP, OP_EDGE = "DEVICE_MOP_FLOOR_CLEAN_REQ", 0x1081
+MODE_OPS = {2: OP_MOP, 1: OP_EDGE}     # commands.CLEAN_MODES: Fregado=2, Bordes=1
+_MOP_MODES = {36, 37, 38, 40}
+_EDGE_MODES = {20, 23}
+LOCK_EVERY_S = 60                      # la nube real retoma el control (0x1079) cada ~1 min
 
 
 def _zone_points(control: dict) -> list:
@@ -69,9 +84,10 @@ def legacy_state(typ, mode, charging: bool, fault) -> str:
 
 
 def battery_pct(raw) -> int:
-    """La gen. legacy reporta la batería en 100..200 -> 0..100 % (device-battery.mapper)."""
-    raw = max(100, min(200, int(raw)))
-    return int(round((raw - 100) * 100 / 100))
+    """La gen. legacy reporta la batería ×2 (200 = 100 %), en el estado 0x10FE y en 0x146F.
+    Confirmado por la app oficial (decompilada) y su captura (@mactron254). OJO: @agnoc lo
+    interpreta como 100..200 -> 0..100 %, que da unos puntos de menos."""
+    return max(0, min(100, int(raw) // 2))
 
 
 def _recv_exact(sock, n: int) -> bytes:
@@ -124,6 +140,8 @@ class LegacyRobot:
         self._listeners = []
         self._waiters = {}             # opname de respuesta -> [Event] (para _send_recv)
         self._kind = {}                # socket -> "cmd" | "map" (puerto por el que entró)
+        self._mode = 0                 # modo elegido en la interfaz (commands.CLEAN_MODES): 0 = auto
+        self._last_lock = 0.0          # último DEVICE_CONTROL_LOCK_REQ enviado
 
     # ---------------- interfaz común (como RealRobot) ----------------
     def start(self):
@@ -173,15 +191,24 @@ class LegacyRobot:
                 if val:
                     return self._send("DEVICE_CHARGE_REQ", {1: 1})
                 return self._auto_clean(CTRL_STOP)
+            if val == 4:                                   # elegir modo (Auto/Fregado/Bordes…)
+                self._mode = int(typ)
+                return {"result": 0}
             if typ in (0, 2) and val in (1, 2):            # iniciar / reanudar / pausar
                 self._manual = False
-                return self._auto_clean(CTRL_PAUSE if val == 2 else CTRL_START)
+                return self._run_mode(CTRL_PAUSE if val == 2 else CTRL_START, starting=(typ == 0))
         elif c == "device_ctrl" and control.get("ctrltype") == 3:   # localizar
             return self._send("DEVICE_SEEK_LOCATION_REQ", {})
-        elif c == "set_preference" and control.get("ctrltype") == 1:   # succión 0..3
-            return self._send("DEVICE_SET_CLEAN_PREFERENCE_REQ", {1: int(control["value"])})
-        elif c == "set_preference" and control.get("ctrltype") == 2:   # agua 0..3 -> 10..13
-            return self._send("DEVICE_SET_CLEAN_PREFERENCE_REQ", {1: 10 + int(control["value"])})
+        elif c == "set_preference" and control.get("ctrltype") == 1:   # succión -> 10..13
+            return self._send("DEVICE_SET_CLEAN_PREFERENCE_REQ",
+                              {1: FAN_TO_ROBOT.get(int(control["value"]), 11)})
+        elif c == "set_preference" and control.get("ctrltype") == 2:   # agua -> 0..3
+            v = int(control["value"])                      # CA (commands.WATER): Off..Alto = 10..13
+            return self._send("DEVICE_SET_CLEAN_PREFERENCE_REQ", {1: max(0, min(3, v - 10 if v >= 10 else v))})
+        elif c == "set_upgrade_config":                    # actualizaciones automáticas (0x10F3)
+            on = bool(control.get("auto_upgrade"))
+            self.state.auto_upgrade = int(on)
+            return self._send("DEVICE_UPGRADE_SET_AUTO_INSTALL_REQ", {1: on})
         elif c == "set_direct":                            # mando manual
             d = int(control.get("direction", 0))
             if not self._manual:
@@ -536,8 +563,29 @@ class LegacyRobot:
         self.reconnected = True
         threading.Thread(target=self._handshake, daemon=True).start()
 
+    def _run_mode(self, ctrl: int, starting: bool) -> dict:
+        """Iniciar/pausar/reanudar en el modo que toca. Al iniciar, el elegido en la interfaz;
+        al pausar/reanudar, el que el robot está haciendo (por su workMode). Fregado y bordes
+        tienen orden propia; el resto, el automático."""
+        if starting:
+            op = MODE_OPS.get(self._mode)
+        elif self.state.work_mode in _MOP_MODES:
+            op = OP_MOP
+        elif self.state.work_mode in _EDGE_MODES:
+            op = OP_EDGE
+        else:
+            op = None
+        if op is None:
+            return self._auto_clean(ctrl)
+        return self._send(op, {1: ctrl})
+
     def _handshake(self):
+        self._last_lock = time.time()
         self._send("DEVICE_CONTROL_LOCK_REQ", {})
+        # actualizaciones automáticas: como la nube real, se le manda el valor al conectar. CA las
+        # deja SIEMPRE apagadas salvo que el usuario las active (ota_enforce, lo fija app.py).
+        self._send("DEVICE_UPGRADE_SET_AUTO_INSTALL_REQ", {1: bool(self.ota_enforce)})
+        self._send("DEVICE_UPGRADE_GET_AUTO_INSTALL_REQ", {})
         self._send("DEVICE_STATUS_GETTING_REQ", {})
         self._send("DEVICE_GET_ALL_GLOBAL_MAP_INFO_REQ", {1: 0, 2: ""})
         self._send("DEVICE_GETTIME_REQ", {})
@@ -586,6 +634,16 @@ class LegacyRobot:
 
         if op == "CLIENT_HEARTBEAT_REQ":
             self._reply(sock, pkt, "CLIENT_HEARTBEAT_RSP")
+            # como la nube real: retomar el control cada ~1 min (si no, el robot se da por libre)
+            if self._handshaken and time.time() - self._last_lock > LOCK_EVERY_S:
+                self._last_lock = time.time()
+                self._send("DEVICE_CONTROL_LOCK_REQ", {})
+        elif op == "DEVICE_UPGRADE_GET_AUTO_INSTALL_RSP":
+            self.state.auto_upgrade = int(bool(pb.first(f, 1, 0)))
+            if self.ota_enforce is not None and self.state.auto_upgrade != int(bool(self.ota_enforce)):
+                self.log("  [legacy] el robot tenía otra preferencia de actualizaciones: se reaplica")
+                self.command({"control": "set_upgrade_config", "auto_upgrade": bool(self.ota_enforce)})
+            self._notify()
         elif op == "DEVICE_MAPID_WORK_STATUS_PUSH_REQ":
             self._apply_status(f)
         elif op == "PUSH_DEVICE_BATTERY_INFO_REQ":
@@ -604,8 +662,11 @@ class LegacyRobot:
         elif op in ("PUSH_DEVICE_PACKAGE_UPGRADE_INFO_REQ", "DEVICE_WORKSTATUS_REPORT_REQ"):
             self._reply(sock, pkt, op.replace("_REQ", "_RSP"), {1: 0})
         elif op == "DEVICE_MAPID_GET_CONSUMABLES_PARAM_RSP":
+            # el robot da el % de USO de cada pieza (app oficial); CA trabaja en horas de uso
             keys = ("main_brush", "side_brush", "filter", "dishcloth")
-            self.state.consumables = {k: pb.first(f, i + 1) for i, k in enumerate(keys)}
+            self.state.consumables = {
+                k: round(int(pb.first(f, i + 1, 0)) * CONSUMABLE_LIFE_H[k] / 100)
+                for i, k in enumerate(keys)}
             self._notify()
         elif op == "DEVICE_EVENT_REPORT_CLEANTASK":
             self._reply(sock, pkt, "UNK_11A4", {1: 0})

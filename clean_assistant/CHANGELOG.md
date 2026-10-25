@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.27.1
+- **Conga antiguos (backend `legacy`): correcciones con la captura de la APP OFICIAL del 4090**
+  (gracias a @mactron254, que decompiló la app y capturó 11 h de uso real). Lo que manda CA es ahora
+  idéntico byte a byte a lo que manda la app de Cecotec.
+  - **Succión y agua estaban intercambiadas** (la referencia, `@agnoc/core`, las tiene al revés):
+    succión = 10 silencio / 11 estándar / 12 turbo / 13 máximo; agua = 0 off … 3 alto. Además, el agua
+    llegaba al robot con un valor fuera de rango.
+  - **Batería**: el robot la da ×2 (200 = 100 %); antes salía unos puntos por debajo.
+  - **Consumibles**: el robot da el % de uso; se convierte a horas como en el resto de modelos.
+  - **Actualizaciones automáticas**: ahora sí se controlan (`0x10F3`). Al conectar se dejan
+    **apagadas**, como en los demás modelos, salvo que las actives.
+  - **Modos Fregado y Bordes** con sus órdenes reales (iniciar y pausar en el modo que toca).
+  - CA **retoma el control** del robot cada minuto, como hace la nube.
+- **Docker**: el `docker-compose.yml` abre los puertos del modo legacy (4010/4030/4050) y el
+  `.env.example` explica `CONGA_BACKEND`.
+
 ## 0.27.0
 - **Estadísticas totales en la Actividad** (todos los modelos): «Limpiezas en total: N · m² · tiempo»,
   sumando el propio historial (como las estadísticas totales de Valetudo).

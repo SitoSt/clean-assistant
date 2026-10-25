@@ -229,7 +229,8 @@ docker compose up -d --build
 
 The web ends up at `http://this-host:8000` and the robot's servers at `:9090` (control)
 and `:8001/:8002/:8006` (OTA/history). The certificates, maps, zones, schedules,
-history, identity and view are stored in `./data` (persistent).
+history, identity and view are stored in `./data` (persistent). For an older Conga
+(3090 / 3490 / 4090) set `CONGA_BACKEND=legacy` in `.env`; it uses ports `4010/4030/4050`.
 
 ## Home Assistant app (ingress)
 
