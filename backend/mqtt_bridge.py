@@ -91,6 +91,16 @@ class MqttBridge:
         self._avail_state = None        # disponibilidad publicada ("online"/"offline")
         self._avail_timer = None        # temporizador de gracia antes de anunciar offline
         self._map_pub_ts = 0.0          # último publish del mapa por MQTT (para acotar frecuencia)
+        # imagen del mapa (entidad `image`): la base solo cuando cambia; en vivo (robot + recorrido)
+        # solo si el usuario lo activa, mientras limpia y como mucho cada MAP_IMAGE_LIVE_S
+        self.map_image_live = False     # preferencia (prefs.json), OFF por defecto
+        self.view_provider = None       # callback -> {"rot", "flip"} (la vista de la interfaz)
+        self._img_sig = None            # firma de la última imagen BASE publicada
+        self._img_live_ts = 0.0         # última imagen EN VIVO publicada
+        self._img_was_live = False      # la última publicada llevaba robot/recorrido
+        self._img_busy = threading.Lock()
+        self.battery_provider = None    # callback -> resumen de salud de batería (backend/battery.py)
+        self._battery_last = None
         self.disc = "homeassistant"
         self.client = None
         # preferencias "para la próxima limpieza" (sombra local: el robot no las reporta)
@@ -234,6 +244,13 @@ class MqttBridge:
             "value_template": "{{ (value_json.rooms | default([])) | length }}",
             "json_attributes_topic": f"conga/{node}/map", "icon": "mdi:floor-plan"})
         self.publish_map(force=True)
+        # el mapa como IMAGEN (PNG), para tarjetas de imagen/aspiradora; con la calibración
+        # píxel <-> metros en los atributos (tarjetas de mapa interactivas)
+        self._disc("image", f"{uid}_map_image", {
+            "name": "Conga Mapa imagen", "unique_id": f"{uid}_map_image",
+            "image_topic": f"conga/{node}/map_image", "content_type": "image/png",
+            "json_attributes_topic": f"conga/{node}/map_image/attr", "icon": "mdi:map"})
+        self.publish_map_image(force=True)
         # aviso de falta de agua (faultCode 525) como binary_sensor
         self._disc("binary_sensor", f"{uid}_low_water", {
             "name": "Conga Falta agua", "unique_id": f"{uid}_low_water",
@@ -242,6 +259,25 @@ class MqttBridge:
             "device_class": "problem", "icon": "mdi:water-alert"})
         # aviso/error actual del robot (texto entendible del diccionario de faultCode), vacío si
         # no hay ninguno. Para automatizar notificaciones en HA (issue #6).
+        # salud de la batería (calculada por CA a partir del historial de cargas y limpiezas)
+        bt = f"conga/{node}/battery_health"
+        for key, name, unit, icon, tpl in (
+                ("bh_cycles", "Conga Ciclos de batería", None, "mdi:battery-sync", "{{ value_json.cycles }}"),
+                ("bh_health", "Conga Salud de batería", "%", "mdi:battery-heart-variant",
+                 "{{ value_json.health if value_json.health is not none else 'unknown' }}"),
+                ("bh_drain", "Conga Consumo de batería", "%/m²", "mdi:battery-arrow-down",
+                 "{{ value_json.pct_per_m2 if value_json.pct_per_m2 is not none else 'unknown' }}"),
+                ("bh_charge", "Conga Velocidad de carga", "%/min", "mdi:battery-charging",
+                 "{{ value_json.charge_rate_low if value_json.charge_rate_low is not none else 'unknown' }}")):
+            cfg = {"name": name, "unique_id": f"{uid}_{key}", "state_topic": bt,
+                   "value_template": tpl, "json_attributes_topic": bt, "icon": icon}
+            if unit:
+                cfg["unit_of_measurement"] = unit
+            if key == "bh_cycles":
+                cfg["state_class"] = "total_increasing"
+            self._disc("sensor", f"{uid}_{key}", cfg)
+        self._battery_last = None
+        self.publish_battery()
         self._disc("sensor", f"{uid}_warning", {
             "name": "Conga Aviso", "unique_id": f"{uid}_warning",
             "state_topic": f"conga/{node}/warning", "icon": "mdi:alert"})
@@ -354,7 +390,9 @@ class MqttBridge:
         actual) publicando payload vacío en cada topic de config -> HA lo elimina."""
         objs = [("sensor", f"{uid}_bat"), ("sensor", f"{uid}_area"),
                 ("sensor", f"{uid}_time"), ("sensor", f"{uid}_pose"),
-                ("sensor", f"{uid}_room_now"), ("sensor", f"{uid}_map"),
+                ("sensor", f"{uid}_room_now"), ("sensor", f"{uid}_map"), ("image", f"{uid}_map_image"),
+                ("sensor", f"{uid}_bh_cycles"), ("sensor", f"{uid}_bh_health"),
+                ("sensor", f"{uid}_bh_drain"), ("sensor", f"{uid}_bh_charge"),
                 ("sensor", f"{uid}_warning"),
                 ("number", f"{uid}_volume"), ("button", f"{uid}_dust"),
                 ("select", f"{uid}_dust_freq"), ("binary_sensor", f"{uid}_low_water")]
@@ -454,6 +492,63 @@ class MqttBridge:
             "trail": trail,
         }
         self._pub(f"conga/{self.node}/map", json.dumps(payload))
+
+    def publish_battery(self):
+        """Publica el resumen de salud de batería (solo si cambió)."""
+        if not self.client or not self.battery_provider:
+            return
+        s = json.dumps(self.battery_provider(), sort_keys=True)
+        if s != self._battery_last:
+            self._battery_last = s
+            self._pub(f"conga/{self.node}/battery_health", s)
+
+    MAP_IMAGE_LIVE_S = 30
+
+    def publish_map_image(self, force=False):
+        """Publica el mapa como PNG en conga/<node>/map_image (retenido) + atributos (calibración).
+
+        - Base (habitaciones, base, paredes virtuales): SOLO cuando cambia el mapa o la vista.
+        - En vivo (robot + recorrido): solo si `map_image_live` está activado, mientras limpia y
+          como mucho cada MAP_IMAGE_LIVE_S. Al terminar se vuelve a publicar la base.
+        El dibujo va en un hilo aparte para no bloquear el bucle de la interfaz."""
+        if not self.client:
+            return
+        m = getattr(self.robot, "map", None)
+        if not m or m.get("sample") or not m.get("cells_b64"):
+            return
+        view = (self.view_provider() if self.view_provider else None) or {}
+        state = getattr(self.robot.state, "state", None)
+        live = self.map_image_live and state in ("cleaning", "mapping", "paused", "returning")
+        now = time.time()
+        if live:
+            if not force and now - self._img_live_ts < self.MAP_IMAGE_LIVE_S:
+                return
+        sig = None
+        if not live:
+            sig = (m.get("cells_b64"), json.dumps(m.get("stored_zones", []), sort_keys=True),
+                   json.dumps(m.get("charger"), sort_keys=True), view.get("rot"), view.get("flip"))
+            if not force and sig == self._img_sig and not self._img_was_live:
+                return
+        if not self._img_busy.acquire(blocking=False):
+            return                                   # ya se está dibujando una (se reintenta luego)
+        if live:
+            self._img_live_ts = now
+        else:
+            self._img_sig = sig
+        self._img_was_live = live
+        trail = list(getattr(self.robot, "trail", None) or []) if live else None
+
+        def work():
+            try:
+                from conga_core.mapimage import render_png
+                png, attrs = render_png(m, view, live=live, trail=trail)
+                self._pub(f"conga/{self.node}/map_image", png)
+                self._pub(f"conga/{self.node}/map_image/attr", json.dumps(attrs))
+            except Exception as e:
+                self.log(f"[mqtt] no se pudo generar la imagen del mapa: {e}")
+            finally:
+                self._img_busy.release()
+        threading.Thread(target=work, daemon=True).start()
 
     def _update_availability(self, online):
         """Disponibilidad con debounce: 'online' inmediato; 'offline' SOLO si el robot lleva

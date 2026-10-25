@@ -535,6 +535,7 @@
           <div class="btnrow"><button class="btn" id="nmCreate">Crear y mapear</button><button class="btn ghost" id="nmCancel">Cancelar</button></div>
         </div>
 
+        <div class="row"><div class="rt"><div class="t">Mapa en vivo en Home Assistant</div><div class="d">Publica por MQTT la imagen del mapa con el robot y el recorrido mientras limpia (cada 30 s)</div></div><button class="toggle" id="mapLiveTog"></button></div>
         <div class="btnrow onlylegacy"><button class="btn ghost" id="resetMapBtn" style="color:var(--critical)">Reiniciar mapa</button></div>
 
         <div class="phead">Robot</div>
@@ -560,6 +561,9 @@
         <div class="btnrow" style="margin-top:6px"><button class="btn ghost" id="dustBtn">Vaciar base ahora</button></div>
         <div class="phead">Consumibles</div>
         <div id="consList"></div>
+        <div class="phead" style="margin-top:18px">Batería</div>
+        <p class="hint" style="opacity:.65;font-size:11.5px;margin:0 0 6px">Estimación de Clean Assistant a partir de las limpiezas y cargas que va viendo.</p>
+        <div id="batHealth"></div>
       </div>
     </section>
   </div>
@@ -912,6 +916,16 @@
   "Toca en el mapa el punto al que quieres enviar el robot.":{en:"Tap the spot on the map where you want to send the robot.",pt:"Toque no mapa o ponto para onde quer enviar o robô.",fr:"Touchez sur la carte l'endroit où envoyer le robot.",pl:"Dotknij na mapie miejsca, do którego chcesz wysłać robota.",de:"Tippe auf der Karte auf die Stelle, zu der der Roboter fahren soll.",it:"Tocca sulla mappa il punto in cui vuoi mandare il robot.",nl:"Tik op de kaart op de plek waar je de robot heen wilt sturen.",ca:"Toca al mapa el punt on vols enviar el robot."},
   "Ir aquí":{en:"Go here",pt:"Ir aqui",fr:"Aller ici",pl:"Jedź tutaj",de:"Hierhin",it:"Vai qui",nl:"Ga hierheen",ca:"Anar-hi"},
   "Reiniciar mapa":{en:"Reset map",pt:"Reiniciar mapa",fr:"Réinitialiser la carte",pl:"Zresetuj mapę",de:"Karte zurücksetzen",it:"Reimposta mappa",nl:"Kaart resetten",ca:"Reinicia el mapa"},
+  "Mapa en vivo en Home Assistant":{en:"Live map in Home Assistant",pt:"Mapa ao vivo no Home Assistant",fr:"Carte en direct dans Home Assistant",pl:"Mapa na żywo w Home Assistant",de:"Live-Karte in Home Assistant",it:"Mappa dal vivo in Home Assistant",nl:"Live kaart in Home Assistant",ca:"Mapa en directe a Home Assistant"},
+  "Publica por MQTT la imagen del mapa con el robot y el recorrido mientras limpia (cada 30 s)":{en:"Publishes the map image over MQTT with the robot and its path while cleaning (every 30 s)",pt:"Publica por MQTT a imagem do mapa com o robô e o percurso enquanto limpa (a cada 30 s)",fr:"Publie par MQTT l'image de la carte avec le robot et son trajet pendant le nettoyage (toutes les 30 s)",pl:"Publikuje przez MQTT obraz mapy z robotem i trasą podczas sprzątania (co 30 s)",de:"Veröffentlicht das Kartenbild per MQTT mit Roboter und Weg während der Reinigung (alle 30 s)",it:"Pubblica via MQTT l'immagine della mappa con il robot e il percorso durante la pulizia (ogni 30 s)",nl:"Publiceert de kaartafbeelding via MQTT met de robot en zijn route tijdens het schoonmaken (elke 30 s)",ca:"Publica per MQTT la imatge del mapa amb el robot i el recorregut mentre neteja (cada 30 s)"},
+  "Batería":{en:"Battery",pt:"Bateria",fr:"Batterie",pl:"Bateria",de:"Akku",it:"Batteria",nl:"Accu",ca:"Bateria"},
+  "Estimación de Clean Assistant a partir de las limpiezas y cargas que va viendo.":{en:"Clean Assistant's estimate, based on the cleanings and charges it has seen.",pt:"Estimativa do Clean Assistant a partir das limpezas e cargas que vai vendo.",fr:"Estimation de Clean Assistant à partir des nettoyages et des charges observés.",pl:"Szacunek Clean Assistant na podstawie zaobserwowanych sprzątań i ładowań.",de:"Schätzung von Clean Assistant anhand der beobachteten Reinigungen und Ladevorgänge.",it:"Stima di Clean Assistant in base alle pulizie e alle ricariche osservate.",nl:"Schatting van Clean Assistant op basis van de waargenomen schoonmaakbeurten en laadbeurten.",ca:"Estimació de Clean Assistant a partir de les neteges i càrregues que va veient."},
+  "Ciclos de carga":{en:"Charge cycles",pt:"Ciclos de carga",fr:"Cycles de charge",pl:"Cykle ładowania",de:"Ladezyklen",it:"Cicli di carica",nl:"Laadcycli",ca:"Cicles de càrrega"},
+  "Salud estimada":{en:"Estimated health",pt:"Saúde estimada",fr:"Santé estimée",pl:"Szacowany stan",de:"Geschätzter Zustand",it:"Salute stimata",nl:"Geschatte conditie",ca:"Salut estimada"},
+  "Consumo al limpiar":{en:"Drain while cleaning",pt:"Consumo ao limpar",fr:"Consommation en nettoyage",pl:"Zużycie podczas sprzątania",de:"Verbrauch beim Reinigen",it:"Consumo in pulizia",nl:"Verbruik tijdens schoonmaken",ca:"Consum en netejar"},
+  "Velocidad de carga":{en:"Charging speed",pt:"Velocidade de carga",fr:"Vitesse de charge",pl:"Szybkość ładowania",de:"Ladegeschwindigkeit",it:"Velocità di carica",nl:"Laadsnelheid",ca:"Velocitat de càrrega"},
+  "Recopilando datos ({n}/{total} limpiezas)":{en:"Collecting data ({n}/{total} cleanings)",pt:"A recolher dados ({n}/{total} limpezas)",fr:"Collecte de données ({n}/{total} nettoyages)",pl:"Zbieranie danych ({n}/{total} sprzątań)",de:"Daten werden gesammelt ({n}/{total} Reinigungen)",it:"Raccolta dati ({n}/{total} pulizie)",nl:"Gegevens verzamelen ({n}/{total} schoonmaakbeurten)",ca:"Recollint dades ({n}/{total} neteges)"},
+  "{low} %/min hasta 80 % · {high} %/min de 80 a 100 %":{en:"{low} %/min up to 80 % · {high} %/min from 80 to 100 %",pt:"{low} %/min até 80 % · {high} %/min de 80 a 100 %",fr:"{low} %/min jusqu'à 80 % · {high} %/min de 80 à 100 %",pl:"{low} %/min do 80 % · {high} %/min od 80 do 100 %",de:"{low} %/min bis 80 % · {high} %/min von 80 bis 100 %",it:"{low} %/min fino all'80 % · {high} %/min dall'80 al 100 %",nl:"{low} %/min tot 80 % · {high} %/min van 80 tot 100 %",ca:"{low} %/min fins al 80 % · {high} %/min del 80 al 100 %"},
   "Mapa persistente":{en:"Persistent map",pt:"Mapa persistente",fr:"Carte persistante",pl:"Trwała mapa",de:"Dauerhafte Karte",it:"Mappa persistente",nl:"Blijvende kaart",ca:"Mapa persistent"},
   "El robot guarda el mapa y lo reutiliza en cada limpieza":{en:"The robot keeps the map and reuses it on every clean",pt:"O robô guarda o mapa e reutiliza-o em cada limpeza",fr:"Le robot garde la carte et la réutilise à chaque nettoyage",pl:"Robot zachowuje mapę i używa jej przy każdym sprzątaniu",de:"Der Roboter behält die Karte und nutzt sie bei jeder Reinigung",it:"Il robot conserva la mappa e la riutilizza a ogni pulizia",nl:"De robot bewaart de kaart en gebruikt die bij elke schoonmaak",ca:"El robot desa el mapa i el reutilitza a cada neteja"},
   "Red WiFi del robot: {ssid} · IP {ip}":{en:"Robot Wi-Fi network: {ssid} · IP {ip}",pt:"Rede Wi-Fi do robô: {ssid} · IP {ip}",fr:"Réseau Wi-Fi du robot : {ssid} · IP {ip}",pl:"Sieć Wi-Fi robota: {ssid} · IP {ip}",de:"WLAN des Roboters: {ssid} · IP {ip}",it:"Rete Wi-Fi del robot: {ssid} · IP {ip}",nl:"Wifi-netwerk van de robot: {ssid} · IP {ip}",ca:"Xarxa Wi-Fi del robot: {ssid} · IP {ip}"},
@@ -1229,6 +1243,22 @@
   // vida de cada consumible EN HORAS (el robot reporta horas de uso; confirmado con la app)
   var CONS={main_brush:{n:'Cepillo central',max:300},side_brush:{n:'Cepillo lateral',max:220},
             filter:{n:'Filtro',max:100},dishcloth:{n:'Mopa',max:160}};
+  // ---- salud de la batería (backend/battery.py) ----
+  function renderBattery(b){
+    var el=document.getElementById('batHealth'); if(!el||!b)return; el.innerHTML='';
+    var health=(b.health!=null)?(b.health+' %'):t('Recopilando datos ({n}/{total} limpiezas)',{n:b.valid_cleans,total:b.needed_cleans});
+    var drain=(b.pct_per_m2!=null)?(b.pct_per_m2+' %/m² · '+b.pct_per_min+' %/min'):'—';
+    var charge=(b.charge_rate_low!=null||b.charge_rate_high!=null)?
+      t('{low} %/min hasta 80 % · {high} %/min de 80 a 100 %',{low:(b.charge_rate_low!=null?b.charge_rate_low:'—'),high:(b.charge_rate_high!=null?b.charge_rate_high:'—')}):'—';
+    [[t('Ciclos de carga'),String(b.cycles)],[t('Salud estimada'),health],[t('Consumo al limpiar'),drain],[t('Velocidad de carga'),charge]].forEach(function(r){
+      var d=document.createElement('div'); d.className='cons';
+      var a=document.createElement('span'); a.className='cn'; a.textContent=r[0];
+      var v=document.createElement('span'); v.style.cssText='margin-left:auto;font-weight:560;font-size:13px;text-align:right'; v.textContent=r[1];
+      d.appendChild(a); d.appendChild(v); el.appendChild(d);
+    });
+  }
+  function loadBattery(){ fetch(BASE+'api/battery').then(function(r){return r.json();}).then(renderBattery).catch(function(){}); }
+  loadBattery(); setInterval(loadBattery,60000);
   function renderCons(c){
     var el=document.getElementById('consList');el.innerHTML='';
     Object.keys(CONS).forEach(function(k){
@@ -1328,6 +1358,8 @@
   wireToggle('otaTog',function(on){api('ota',{value:on});});
   wireToggle('carpetTog',function(on){api('carpet_turbo',{value:on});});
   wireToggle('persistTog',function(on){api('persistent_map',{value:on});});
+  // imagen del mapa por MQTT: la base se publica siempre (solo al cambiar); esto añade robot + recorrido
+  wireToggle('mapLiveTog',function(on){fetch(BASE+'api/prefs/map_image_live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:on})});});
   // ---- solo gen. legacy: mapa nuevo pendiente, reiniciar mapa e "ir aquí" (como Congatudo) ----
   document.getElementById('pendSave').addEventListener('click',function(){ document.getElementById('pendMap').hidden=true; api('pending_map',{save:true}); });
   document.getElementById('pendDrop').addEventListener('click',async function(){
@@ -2433,6 +2465,7 @@
     var ver=document.getElementById('appVer');
     if(ver&&info.version) ver.textContent='v'+info.version;
     if(info.backend==='legacy') document.body.classList.add('legacy');   // Conga 3xxx/4xxx
+    var ml=document.getElementById('mapLiveTog'); if(ml) ml.setAttribute('aria-pressed',!!info.map_image_live);
   }).catch(function(){});
   connect();
 })();

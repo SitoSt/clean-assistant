@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.28.0
+- **El mapa como imagen en Home Assistant** (issue #13, @zjuanma): nueva entidad MQTT `image`
+  **«Conga Mapa imagen»** (PNG), lista para tarjetas de imagen o de aspiradora. Mismos colores y
+  **misma orientación** que en Clean Assistant (respeta el giro/volteo de la vista). Todos los modelos.
+  - El **mapa base** (habitaciones, base, paredes virtuales) solo se publica **cuando cambia** el
+    mapa o la vista: ~10 KB, carga prácticamente nula.
+  - **Mapa en vivo** opcional, **desactivado por defecto** (Ajustes → Mapas de la casa): añade el
+    robot y el recorrido, como mucho cada 30 s y solo mientras limpia. Al terminar vuelve al base.
+  - Atributos con la **calibración** píxel ↔ metros (`calibration_points`, 3 puntos), tamaño,
+    escala y vista, para tarjetas de mapa interactivas.
+  - Sin dependencias nuevas (el PNG se genera a mano); se dibuja en segundo plano.
+- **Salud de la batería** (todos los modelos; idea de @mactron254, al estilo de Vacuum_Agent): en
+  Ajustes → Consumibles y como sensores de HA (**Ciclos de batería**, **Salud de batería**,
+  **Consumo de batería**, **Velocidad de carga**). Lo calcula Clean Assistant con lo que ya reporta
+  el robot, sin nada nuevo de protocolo:
+  - **Ciclos**: suma de las descargas (100 % = 1 ciclo).
+  - **Consumo** por m² y por minuto de cada limpieza (solo las que sirven para medir: sin recargas a
+    mitad, ≥5 %, ≥3 m² y ≥5 min).
+  - **Velocidad de carga** por debajo del 80 % (rápida) y por encima (lenta).
+  - **Salud estimada**: consumo por m² de las 5 primeras limpiezas frente a las 5 últimas; aparece a
+    partir de 10 limpiezas válidas. Se guarda en `battery_health.json` (no se borra al vaciar la
+    actividad).
+
 ## 0.27.1
 - **Conga antiguos (backend `legacy`): correcciones con la captura de la APP OFICIAL del 4090**
   (gracias a @mactron254, que decompiló la app y capturó 11 h de uso real). Lo que manda CA es ahora

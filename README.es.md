@@ -155,6 +155,21 @@ para desarrollar la interfaz sin un Conga.
   molestar/voz/OTA/turbo/doble pasada, volumen, sensor «Falta agua» y un switch por
   horario. Montado **encima** del mismo robot (sin un segundo servidor). Se activa solo
   con el broker de HA.
+- **El mapa como imagen** (entidad `image` **Conga Mapa imagen**), lista para una tarjeta de
+  imagen o de aspiradora, con los mismos colores y orientación que Clean Assistant. Solo se
+  publica cuando cambia el mapa, así que es muy ligera (~10 KB). **Mapa en vivo** opcional
+  (Ajustes → Mapas de la casa): robot y recorrido cada 30 s mientras limpia. En sus atributos
+  van los `calibration_points` píxel ↔ metros para tarjetas de mapa interactivas. Ejemplo:
+  ```yaml
+  type: picture-entity
+  entity: image.conga_mapa_imagen   # comprueba el id exacto en tu HA
+  show_state: false
+  ```
+- **Salud de la batería** (todos los modelos, Ajustes → Consumibles): ciclos de carga, consumo por
+  m² y por minuto al limpiar, velocidad de carga por debajo y por encima del 80 % y una **salud
+  estimada** que compara las limpiezas recientes con las primeras (aparece a partir de 10
+  limpiezas válidas). También como sensores de Home Assistant. Idea de mactron254, al estilo de
+  Vacuum_Agent.
 - Interfaz **táctil**: dibujar zonas, separar/unir habitaciones y seleccionar
   habitaciones a dedo, sin que la página haga scroll.
 

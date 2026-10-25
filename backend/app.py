@@ -27,6 +27,7 @@ from backend.zones import ZoneStore
 from backend.schedules import ScheduleStore, suggested_plans, plan_from_order, run_controls
 from backend.maps import MapStore
 from backend.history import HistoryStore
+from backend.battery import BatteryHealth
 from backend.mqtt_bridge import MqttBridge
 from backend.cloud_stub import LocalCloud
 
@@ -95,6 +96,7 @@ zones = ZoneStore(_data("zones.json"))       # zonas de Clean Assistant (persist
 schedules = ScheduleStore(_data("schedules.json"))   # horarios (persistentes)
 house_maps = MapStore(_data("maps.json"))    # mapas de la casa vistos (para listar/cambiar)
 history = HistoryStore(_data("history.json"))   # registro de actividad (historial de limpiezas)
+battery_health = BatteryHealth(_data("battery_health.json"))   # ciclos, consumo, carga y salud
 # seguimiento de un mapeo nuevo en curso: al volver a la base tras mapear -> setSaveMap
 _new_map = {"pending": False, "moved": False}
 _last_active_id = [None]   # último mapa activo difundido (para no reenviar en cada frame)
@@ -198,6 +200,10 @@ def _save_view():
 PREFS_PATH = _data("prefs.json")
 
 
+# preferencias propias de Clean Assistant (no del robot): se aplican al puente MQTT al crearlo
+_ui_prefs = {"map_image_live": False}
+
+
 def _load_prefs():
     try:
         with open(PREFS_PATH, encoding="utf-8") as f:
@@ -218,6 +224,7 @@ def _load_prefs():
         except (TypeError, ValueError):
             robot.ota_enforce = 0
         robot.state.auto_upgrade = robot.ota_enforce
+    _ui_prefs["map_image_live"] = bool(p.get("map_image_live", False))
 
 
 def _save_prefs():
@@ -225,7 +232,8 @@ def _save_prefs():
         with open(PREFS_PATH, "w", encoding="utf-8") as f:
             json.dump({"collect_freq": robot.state.collect_freq,
                        "base_type": robot.state.base_type,
-                       "ota": getattr(robot, "ota_enforce", 0)}, f)
+                       "ota": getattr(robot, "ota_enforce", 0),
+                       "map_image_live": _ui_prefs["map_image_live"]}, f)
     except Exception:
         pass
 
@@ -525,6 +533,9 @@ def _ingest_report(rep: dict):
 # Puente MQTT opcional para Home Assistant (montado sobre el mismo robot). Solo se
 # activa si MQTT_HOST está definido; si no, todos sus métodos son no-ops.
 mqtt = MqttBridge(robot, schedules, env, _map_head_id, _rooms_meta, persist=_save_prefs)
+mqtt.map_image_live = _ui_prefs["map_image_live"]     # mapa en vivo como imagen: OFF por defecto
+mqtt.view_provider = lambda: view_settings            # la imagen sale con la misma vista que la UI
+mqtt.battery_provider = battery_health.summary
 
 
 def _send_zone_group(group: str):
@@ -604,6 +615,7 @@ async def broadcast_map():
         return
     _remember_rooms()                          # cachea los nombres de habitación de este mapa
     mqtt.publish_map(force=True)               # geometría del mapa por MQTT (cambió el mapa)
+    mqtt.publish_map_image()                   # y como imagen (solo si cambió de verdad)
     msg = json.dumps({"type": "map", "map": _view_map()})
     for ws in list(clients):
         try:
@@ -618,6 +630,7 @@ async def broadcast_pose():
         return
     mqtt.publish_pose()                       # expone x/y/ángulo por MQTT (floorplans externos)
     mqtt.publish_map()                         # geometría + traza por MQTT (con throttle de 10 s)
+    mqtt.publish_map_image()                   # imagen en vivo si está activada (cada 30 s)
     msg = json.dumps({"type": "pose", "pose": pose,
                       "trail": list(getattr(robot, "trail", None) or [])})
     for ws in list(clients):
@@ -832,6 +845,9 @@ async def lifespan(app: FastAPI):
     def on_update():
         asyncio.run_coroutine_threadsafe(broadcast(), loop)
         mqtt.publish_state()
+        mqtt.publish_map_image()              # al acabar de limpiar vuelve a la imagen base
+        if battery_health.update(robot.state):  # salud de batería: nueva limpieza/carga registrada
+            mqtt.publish_battery()
         _apply_first_run_defaults()           # instalación nueva: OTA off + vaciado tras limpieza
         _ended = _track_session()             # limpieza terminada
         _fault = _track_faults()              # aviso/error nuevo
@@ -1003,7 +1019,7 @@ async def lifespan(app: FastAPI):
     mqtt.stop()
 
 
-app = FastAPI(title="Clean Assistant", version="0.27.1", lifespan=lifespan)
+app = FastAPI(title="Clean Assistant", version="0.28.0", lifespan=lifespan)
 
 
 @app.get("/api/state")
@@ -1021,7 +1037,8 @@ def get_info():
         model = "Conga"
     return {"version": app.version, "model": model,
             "mode": getattr(robot, "link", "local"),
-            "backend": "legacy" if LEGACY else "new"}   # la interfaz oculta lo que no aplica
+            "backend": "legacy" if LEGACY else "new",   # la interfaz oculta lo que no aplica
+            "map_image_live": mqtt.map_image_live}
 
 
 def _supervisor_get(path: str):
@@ -1168,7 +1185,24 @@ async def set_view(payload: dict):
         view_settings["flip"] = 1 if payload["flip"] else 0
     _save_view()
     await broadcast_view()
+    mqtt.publish_map_image()                  # la imagen del mapa sigue la vista de la interfaz
     return {"ok": True, "view": view_settings}
+
+
+@app.get("/api/battery")
+def get_battery():
+    """Salud de la batería: ciclos, consumo por m²/min, velocidad de carga y salud estimada."""
+    return battery_health.summary()
+
+
+@app.post("/api/prefs/map_image_live")
+async def set_map_image_live(payload: dict):
+    """Mapa en vivo como imagen por MQTT (robot + recorrido cada 30 s mientras limpia). OFF
+    por defecto: el mapa base (sin robot) se publica siempre, solo cuando cambia."""
+    _ui_prefs["map_image_live"] = mqtt.map_image_live = bool(payload.get("value"))
+    _save_prefs()
+    mqtt.publish_map_image(force=True)
+    return {"ok": True, "map_image_live": mqtt.map_image_live}
 
 
 @app.get("/api/zones")
