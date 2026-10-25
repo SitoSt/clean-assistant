@@ -162,8 +162,16 @@ para desarrollar la interfaz sin un Conga.
   van los `calibration_points` píxel ↔ metros para tarjetas de mapa interactivas. Ejemplo:
   ```yaml
   type: picture-entity
-  entity: image.conga_mapa_imagen   # comprueba el id exacto en tu HA
+  entity: image.conga_conga_mapa_imagen
   show_state: false
+  ```
+  También funciona como mapa de [vacuum-card](https://github.com/denysdovhan/vacuum-card)
+  (gracias a zjuanma por probarlo):
+  ```yaml
+  type: custom:vacuum-card
+  entity: vacuum.conga_conga
+  map: image.conga_conga_mapa_imagen
+  map_refresh: 30
   ```
 - **Salud de la batería** (todos los modelos, Ajustes → Consumibles): ciclos de carga, consumo por
   m² y por minuto al limpiar, velocidad de carga por debajo y por encima del 80 % y una **salud
@@ -309,7 +317,7 @@ de esa plataforma también funcionan**. Confirmados hasta ahora:
 - **Conga 8090 Ultra** — desarrollada y verificada de punta a punta
 - **Conga 4690 Ultra** — confirmado por un usuario de la comunidad
 - **Conga 9090** — confirmado por un usuario de la comunidad
-- **Conga 7090** — confirmado por un usuario de la comunidad
+- **Conga 7090** — confirmado por usuarios de la comunidad (`CECOTECCRL30V-7003`)
 - **Conga 6090** — confirmado por usuarios de la comunidad
 - **Conga 3890** — confirmado por un usuario de la comunidad
 

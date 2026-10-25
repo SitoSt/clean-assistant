@@ -163,8 +163,16 @@ develop the interface without a Conga.
   `calibration_points` for interactive map cards. Example:
   ```yaml
   type: picture-entity
-  entity: image.conga_mapa_imagen   # check the exact id in your HA
+  entity: image.conga_conga_mapa_imagen
   show_state: false
+  ```
+  It also works as the map of [vacuum-card](https://github.com/denysdovhan/vacuum-card)
+  (thanks to zjuanma for testing it):
+  ```yaml
+  type: custom:vacuum-card
+  entity: vacuum.conga_conga
+  map: image.conga_conga_mapa_imagen
+  map_refresh: 30
   ```
 - **Battery health** (all models, Settings → Consumables): charge cycles, drain per m² and per
   minute while cleaning, charging speed below/above 80 %, and an **estimated health** that
@@ -307,7 +315,7 @@ work too**. Confirmed so far:
 - **Conga 8090 Ultra** — developed and verified end to end
 - **Conga 4690 Ultra** — confirmed by a community user
 - **Conga 9090** — confirmed by a community user
-- **Conga 7090** — confirmed by a community user
+- **Conga 7090** — confirmed by community users (`CECOTECCRL30V-7003`)
 - **Conga 6090** — confirmed by community users
 - **Conga 3890** — confirmed by a community user
 

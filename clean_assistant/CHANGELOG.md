@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.28.1
+- **Conga 7090** reconocido por su nombre (`project_type` `CECOTECCRL30V-7003`; gracias a @zjuanma,
+  issue #13).
+- README: id correcto de la entidad del mapa (`image.conga_conga_mapa_imagen`) y ejemplo para
+  [vacuum-card](https://github.com/denysdovhan/vacuum-card), probado por @zjuanma.
+
 ## 0.28.0
 - **El mapa como imagen en Home Assistant** (issue #13, @zjuanma): nueva entidad MQTT `image`
   **«Conga Mapa imagen»** (PNG), lista para tarjetas de imagen o de aspiradora. Mismos colores y
