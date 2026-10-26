@@ -186,6 +186,20 @@ develop the interface without a Conga.
 - **Touch** interface: draw zones, split/merge rooms and select rooms by hand, without
   the page scrolling.
 
+### 🏡 Showcase: the Conga on a 3D floorplan
+What you can build on top of Clean Assistant's MQTT data. **miajed** modeled their house in
+Sweet Home 3D and draws the Conga live on it: robot position with room-by-room calibration,
+the cleaning trail, and an occlusion mask so the robot "hides" under beds and furniture. All
+local, using the `pose`, current room, `map` and `trail` data from Clean Assistant.
+
+<p align="center">
+  <img width="640" alt="Conga cleaning trail on a 3D floorplan in Home Assistant (by miajed)" src="https://github.com/user-attachments/assets/5bc5519c-15da-40a7-a5c2-c094f455b4b8" />
+  <img width="300" alt="Custom Conga popup in Home Assistant (by miajed)" src="https://github.com/user-attachments/assets/5fd5ebe4-fdfb-4e7a-93da-3d39d6bd9c29" />
+</p>
+
+How it's done (Sweet Home 3D, `picture-elements`, calibration, occlusion mask, Mushroom cards):
+[miajed's explanation in issue #2](https://github.com/miguelsg29/clean-assistant/issues/2#issuecomment-6414874341).
+
 ### 🌍 Languages & easy updates
 - Interface **in 9 languages** — Spanish, English, German, Italian, French, Portuguese, Dutch,
   Catalan and Polish. Pick it from the header; it auto-detects your browser language.

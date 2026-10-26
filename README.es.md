@@ -187,6 +187,22 @@ para desarrollar la interfaz sin un Conga.
 - Interfaz **táctil**: dibujar zonas, separar/unir habitaciones y seleccionar
   habitaciones a dedo, sin que la página haga scroll.
 
+### 🏡 Ejemplo: el Conga sobre un plano 3D
+Lo que se puede construir con los datos MQTT de Clean Assistant. **miajed** modeló su casa en
+Sweet Home 3D y dibuja el Conga en directo encima: posición del robot calibrada habitación por
+habitación, el recorrido de limpieza y una máscara de oclusión para que el robot se "esconda"
+bajo camas y muebles. Todo local, con los datos `pose`, habitación actual, `map` y `trail` de
+Clean Assistant.
+
+<p align="center">
+  <img width="640" alt="Recorrido del Conga sobre un plano 3D en Home Assistant (de miajed)" src="https://github.com/user-attachments/assets/5bc5519c-15da-40a7-a5c2-c094f455b4b8" />
+  <img width="300" alt="Ventana del Conga personalizada en Home Assistant (de miajed)" src="https://github.com/user-attachments/assets/5fd5ebe4-fdfb-4e7a-93da-3d39d6bd9c29" />
+</p>
+
+Cómo está hecho (Sweet Home 3D, `picture-elements`, calibración, máscara de oclusión, tarjetas
+Mushroom): [la explicación de miajed en el issue #2](https://github.com/miguelsg29/clean-assistant/issues/2#issuecomment-6414874341)
+(en inglés).
+
 ### 🌍 Idiomas y actualizaciones fáciles
 - Interfaz **en 9 idiomas** — español, inglés, alemán, italiano, francés, portugués, neerlandés,
   catalán y polaco. Se elige en la cabecera; detecta el idioma del navegador automáticamente.
