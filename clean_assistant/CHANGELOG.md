@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.29.1
+- Modo **Cloud + Local**: el log de los comandos de la app oficial (`[cloud]`) ya no se corta a
+  220 caracteres (ahora hasta 4000). Así las capturas incluyen los horarios y habitaciones
+  completos, necesarios para dar soporte al 3890 (#14) y al 7090 (#15).
+
 ## 0.29.0
 - **Aviso de limpiar los sensores cada 35 h** (todos los modelos; idea de @mactron254, issue #12):
   CA cuenta las horas limpiando/mapeando desde el último reset (`sensor_care.json`). Fila

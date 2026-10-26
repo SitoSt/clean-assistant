@@ -328,9 +328,11 @@ class RealRobot:
             except Exception:
                 pass
         if ctrl and ctrl not in self._NOISE:
+            # completo (hasta 4000 caracteres): las capturas de la app oficial sirven para dar
+            # soporte a modelos nuevos y a 220 se cortaban justo los horarios/habitaciones (#14)
             extras = {k: v for k, v in d.items() if k != "control"}
             self.log(f"  [cloud][{direction}] {ctrl} "
-                     f"{json.dumps(extras, ensure_ascii=False)[:220]}")
+                     f"{json.dumps(extras, ensure_ascii=False)[:4000]}")
 
     def _capture_login(self, result):
         """Extrae la identidad del robot de la respuesta de login de la nube."""
