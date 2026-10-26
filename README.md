@@ -178,6 +178,11 @@ develop the interface without a Conga.
   minute while cleaning, charging speed below/above 80 %, and an **estimated health** that
   compares recent cleanings with the first ones (shown after 10 valid cleanings). Also as Home
   Assistant sensors. Idea by mactron254, in the spirit of Vacuum_Agent.
+- **Sensor cleaning reminder** (all models): Clean Assistant counts the robot's working hours and
+  reminds you to clean the sensors (cliff, bumper, laser, charging contacts) every **35 h**, like
+  the official app of the 3xxx/4xxx generation. "Sensors" row in Settings → Consumables and in
+  Home Assistant: **Conga Limpiar sensores** (problem binary sensor, for notifications), the hours
+  sensor and a **Conga Sensores limpiados** button to reset it. Idea by mactron254.
 - **Touch** interface: draw zones, split/merge rooms and select rooms by hand, without
   the page scrolling.
 

@@ -101,6 +101,9 @@ class MqttBridge:
         self._img_was_live = False      # la última publicada llevaba robot/recorrido
         self._img_busy = threading.Lock()
         self.battery_provider = None    # callback -> resumen de salud de batería (backend/battery.py)
+        self.sensors_provider = None    # callback -> aviso de limpieza de sensores (backend/sensors.py)
+        self.sensors_reset = None       # callback -> 'Hecho' (sensores limpios)
+        self._sensors_last = None
         self._battery_last = None
         self.disc = "homeassistant"
         self.client = None
@@ -279,6 +282,22 @@ class MqttBridge:
             self._disc("sensor", f"{uid}_{key}", cfg)
         self._battery_last = None
         self.publish_battery()
+        # aviso de limpieza de sensores (cada 35 h de trabajo; lo cuenta CA, vale para todos)
+        sc = f"conga/{node}/sensor_care"
+        self._disc("sensor", f"{uid}_sensor_hours", {
+            "name": "Conga Horas desde limpiar sensores", "unique_id": f"{uid}_sensor_hours",
+            "state_topic": sc, "value_template": "{{ value_json.hours }}",
+            "json_attributes_topic": sc, "unit_of_measurement": "h", "icon": "mdi:eye-refresh"})
+        self._disc("binary_sensor", f"{uid}_sensor_due", {
+            "name": "Conga Limpiar sensores", "unique_id": f"{uid}_sensor_due",
+            "state_topic": sc, "value_template": "{{ 'ON' if value_json.due else 'OFF' }}",
+            "payload_on": "ON", "payload_off": "OFF",
+            "device_class": "problem", "icon": "mdi:eye-refresh"})
+        self._disc("button", f"{uid}_sensor_reset", {
+            "name": "Conga Sensores limpiados", "unique_id": f"{uid}_sensor_reset",
+            "command_topic": f"{sc}/reset", "payload_press": "reset", "icon": "mdi:restart"})
+        self._sensors_last = None
+        self.publish_sensors()
         self._disc("sensor", f"{uid}_warning", {
             "name": "Conga Aviso", "unique_id": f"{uid}_warning",
             "state_topic": f"conga/{node}/warning", "icon": "mdi:alert"})
@@ -394,6 +413,8 @@ class MqttBridge:
                 ("sensor", f"{uid}_room_now"), ("sensor", f"{uid}_map"), ("image", f"{uid}_map_image"),
                 ("sensor", f"{uid}_bh_cycles"), ("sensor", f"{uid}_bh_health"),
                 ("sensor", f"{uid}_bh_drain"), ("sensor", f"{uid}_bh_charge"),
+                ("sensor", f"{uid}_sensor_hours"), ("binary_sensor", f"{uid}_sensor_due"),
+                ("button", f"{uid}_sensor_reset"),
                 ("sensor", f"{uid}_warning"),
                 ("number", f"{uid}_volume"), ("button", f"{uid}_dust"),
                 ("select", f"{uid}_dust_freq"), ("binary_sensor", f"{uid}_low_water")]
@@ -502,6 +523,15 @@ class MqttBridge:
         if s != self._battery_last:
             self._battery_last = s
             self._pub(f"conga/{self.node}/battery_health", s)
+
+    def publish_sensors(self):
+        """Publica el aviso de limpieza de sensores (solo si cambió)."""
+        if not self.client or not self.sensors_provider:
+            return
+        s = json.dumps(self.sensors_provider(), sort_keys=True)
+        if s != self._sensors_last:
+            self._sensors_last = s
+            self._pub(f"conga/{self.node}/sensor_care", s)
 
     MAP_IMAGE_LIVE_S = 30
 
@@ -638,6 +668,7 @@ class MqttBridge:
                     f"conga/{node}/room_command", f"conga/{node}/plan_run",
                     f"conga/{node}/dust_action",
                     f"conga/{node}/consumable/+/reset", f"conga/{node}/dust_freq/set",
+                    f"conga/{node}/sensor_care/reset",
                     f"conga/{node}/pref/+/set", f"conga/{node}/sched/+/set",
                     f"conga/{node}/twice/set", f"conga/{node}/turbo_carpet/set",
                     f"conga/{node}/ota/set", f"conga/{node}/quiet/set",
@@ -796,6 +827,12 @@ class MqttBridge:
 
             if topic == f"conga/{node}/dust_action":
                 self._cmd(cmd.dust_action())
+                return
+
+            if topic == f"conga/{node}/sensor_care/reset":
+                if self.sensors_reset:
+                    self.sensors_reset()
+                    self.publish_sensors()
                 return
 
             if topic.startswith(f"conga/{node}/consumable/") and topic.endswith("/reset"):

@@ -923,6 +923,10 @@
   "Ciclos de carga":{en:"Charge cycles",pt:"Ciclos de carga",fr:"Cycles de charge",pl:"Cykle ładowania",de:"Ladezyklen",it:"Cicli di carica",nl:"Laadcycli",ca:"Cicles de càrrega"},
   "Salud estimada":{en:"Estimated health",pt:"Saúde estimada",fr:"Santé estimée",pl:"Szacowany stan",de:"Geschätzter Zustand",it:"Salute stimata",nl:"Geschatte conditie",ca:"Salut estimada"},
   "Consumo al limpiar":{en:"Drain while cleaning",pt:"Consumo ao limpar",fr:"Consommation en nettoyage",pl:"Zużycie podczas sprzątania",de:"Verbrauch beim Reinigen",it:"Consumo in pulizia",nl:"Verbruik tijdens schoonmaken",ca:"Consum en netejar"},
+  "Sensores":{en:"Sensors",pt:"Sensores",fr:"Capteurs",pl:"Czujniki",de:"Sensoren",it:"Sensori",nl:"Sensoren",ca:"Sensors"},
+  "Limpia los sensores cada {limit} h de trabajo. Llevas {hours} h.":{en:"Clean the sensors every {limit} h of work. Current: {hours} h.",pt:"Limpe os sensores a cada {limit} h de trabalho. Leva {hours} h.",fr:"Nettoyez les capteurs toutes les {limit} h de travail. Actuellement : {hours} h.",pl:"Czyść czujniki co {limit} h pracy. Obecnie: {hours} h.",de:"Sensoren alle {limit} h Betrieb reinigen. Bisher: {hours} h.",it:"Pulisci i sensori ogni {limit} h di lavoro. Finora: {hours} h.",nl:"Reinig de sensoren elke {limit} u werk. Nu: {hours} u.",ca:"Neteja els sensors cada {limit} h de treball. Portes {hours} h."},
+  "Pulsa cuando hayas limpiado los sensores":{en:"Press after cleaning the sensors",pt:"Prima depois de limpar os sensores",fr:"Appuyez après avoir nettoyé les capteurs",pl:"Naciśnij po wyczyszczeniu czujników",de:"Nach dem Reinigen der Sensoren drücken",it:"Premi dopo aver pulito i sensori",nl:"Druk na het reinigen van de sensoren",ca:"Prem quan hagis netejat els sensors"},
+  "¿Has limpiado los sensores? El contador vuelve a 0.":{en:"Have you cleaned the sensors? The counter goes back to 0.",pt:"Limpou os sensores? O contador volta a 0.",fr:"Avez-vous nettoyé les capteurs ? Le compteur revient à 0.",pl:"Czy wyczyściłeś czujniki? Licznik wraca do 0.",de:"Sensoren gereinigt? Der Zähler wird auf 0 gesetzt.",it:"Hai pulito i sensori? Il contatore torna a 0.",nl:"Sensoren gereinigd? De teller gaat terug naar 0.",ca:"Has netejat els sensors? El comptador torna a 0."},
   "Velocidad de carga":{en:"Charging speed",pt:"Velocidade de carga",fr:"Vitesse de charge",pl:"Szybkość ładowania",de:"Ladegeschwindigkeit",it:"Velocità di carica",nl:"Laadsnelheid",ca:"Velocitat de càrrega"},
   "Recopilando datos ({n}/{total} limpiezas)":{en:"Collecting data ({n}/{total} cleanings)",pt:"A recolher dados ({n}/{total} limpezas)",fr:"Collecte de données ({n}/{total} nettoyages)",pl:"Zbieranie danych ({n}/{total} sprzątań)",de:"Daten werden gesammelt ({n}/{total} Reinigungen)",it:"Raccolta dati ({n}/{total} pulizie)",nl:"Gegevens verzamelen ({n}/{total} schoonmaakbeurten)",ca:"Recollint dades ({n}/{total} neteges)"},
   "{low} %/min hasta 80 % · {high} %/min de 80 a 100 %":{en:"{low} %/min up to 80 % · {high} %/min from 80 to 100 %",pt:"{low} %/min até 80 % · {high} %/min de 80 a 100 %",fr:"{low} %/min jusqu'à 80 % · {high} %/min de 80 à 100 %",pl:"{low} %/min do 80 % · {high} %/min od 80 do 100 %",de:"{low} %/min bis 80 % · {high} %/min von 80 bis 100 %",it:"{low} %/min fino all'80 % · {high} %/min dall'80 al 100 %",nl:"{low} %/min tot 80 % · {high} %/min van 80 tot 100 %",ca:"{low} %/min fins al 80 % · {high} %/min del 80 al 100 %"},
@@ -1259,6 +1263,26 @@
   }
   function loadBattery(){ fetch(BASE+'api/battery').then(function(r){return r.json();}).then(renderBattery).catch(function(){}); }
   loadBattery(); setInterval(loadBattery,60000);
+  // ---- aviso de limpieza de sensores (backend/sensors.py): cada 35 h de trabajo ----
+  var sensorCare=null;
+  function loadSensors(){ fetch(BASE+'api/sensors').then(function(r){return r.json();}).then(function(x){sensorCare=x;renderCons(st&&st.consumables||{});}).catch(function(){}); }
+  loadSensors(); setInterval(loadSensors,60000);
+  function renderSensors(el){
+    var sc=sensorCare; if(!sc)return;
+    var left=Math.max(0,Math.round((sc.limit-sc.hours)/sc.limit*100));
+    var cls=sc.due?'crit':(left<20?'warn':'');
+    var d=document.createElement('div');d.className='cons';
+    d.innerHTML='<span class="cn">'+t('Sensores')+'</span><span class="track"><i class="'+cls+'" style="width:'+left+'%"></i></span>'+
+      '<span class="pct '+(sc.due?'crit':'')+'">'+left+'%</span>'+
+      '<button class="iconbtn consreset" aria-label="'+t('Restablecer')+'">↺</button>';
+    d.title=t('Limpia los sensores cada {limit} h de trabajo. Llevas {hours} h.',{limit:sc.limit,hours:sc.hours});
+    d.querySelector('.consreset').title=t('Pulsa cuando hayas limpiado los sensores');
+    d.querySelector('.consreset').addEventListener('click',async function(){
+      if(await uiConfirm(t('¿Has limpiado los sensores? El contador vuelve a 0.')))
+        fetch(BASE+'api/sensors/reset',{method:'POST'}).then(function(r){return r.json();}).then(function(x){sensorCare=x;renderCons(st&&st.consumables||{});});
+    });
+    el.appendChild(d);
+  }
   function renderCons(c){
     var el=document.getElementById('consList');el.innerHTML='';
     Object.keys(CONS).forEach(function(k){
@@ -1278,6 +1302,7 @@
       });
       el.appendChild(d);
     });
+    renderSensors(el);
   }
 
   // ---- controles ----

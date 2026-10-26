@@ -178,6 +178,12 @@ para desarrollar la interfaz sin un Conga.
   estimada** que compara las limpiezas recientes con las primeras (aparece a partir de 10
   limpiezas válidas). También como sensores de Home Assistant. Idea de mactron254, al estilo de
   Vacuum_Agent.
+- **Aviso de limpiar los sensores** (todos los modelos): Clean Assistant cuenta las horas de trabajo
+  del robot y avisa de limpiar los sensores (precipicio, bumper, láser, contactos de carga) cada
+  **35 h**, como la app oficial de la generación 3xxx/4xxx. Fila «Sensores» en Ajustes →
+  Consumibles y en Home Assistant: **Conga Limpiar sensores** (binary sensor de problema, para
+  notificaciones), el sensor de horas y el botón **Conga Sensores limpiados** para ponerlo a 0.
+  Idea de mactron254.
 - Interfaz **táctil**: dibujar zonas, separar/unir habitaciones y seleccionar
   habitaciones a dedo, sin que la página haga scroll.
 

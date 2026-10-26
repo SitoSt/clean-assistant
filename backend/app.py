@@ -28,6 +28,7 @@ from backend.schedules import ScheduleStore, suggested_plans, plan_from_order, r
 from backend.maps import MapStore
 from backend.history import HistoryStore
 from backend.battery import BatteryHealth
+from backend.sensors import SensorCare
 from backend.mqtt_bridge import MqttBridge
 from backend.cloud_stub import LocalCloud
 
@@ -97,6 +98,7 @@ schedules = ScheduleStore(_data("schedules.json"))   # horarios (persistentes)
 house_maps = MapStore(_data("maps.json"))    # mapas de la casa vistos (para listar/cambiar)
 history = HistoryStore(_data("history.json"))   # registro de actividad (historial de limpiezas)
 battery_health = BatteryHealth(_data("battery_health.json"))   # ciclos, consumo, carga y salud
+sensor_care = SensorCare(_data("sensor_care.json"))   # aviso de limpiar sensores cada 35 h de trabajo
 # seguimiento de un mapeo nuevo en curso: al volver a la base tras mapear -> setSaveMap
 _new_map = {"pending": False, "moved": False}
 _last_active_id = [None]   # último mapa activo difundido (para no reenviar en cada frame)
@@ -536,6 +538,8 @@ mqtt = MqttBridge(robot, schedules, env, _map_head_id, _rooms_meta, persist=_sav
 mqtt.map_image_live = _ui_prefs["map_image_live"]     # mapa en vivo como imagen: OFF por defecto
 mqtt.view_provider = lambda: view_settings            # la imagen sale con la misma vista que la UI
 mqtt.battery_provider = battery_health.summary
+mqtt.sensors_provider = sensor_care.summary
+mqtt.sensors_reset = sensor_care.reset
 
 
 def _send_zone_group(group: str):
@@ -768,6 +772,8 @@ async def _loop():
         robot.tick()
         await broadcast()
         mqtt.publish_state()
+        if sensor_care.update(robot.state):   # horas de trabajo para el aviso de sensores
+            mqtt.publish_sensors()
         if LEGACY:
             await _run_due_schedules_legacy()
 
@@ -1019,7 +1025,7 @@ async def lifespan(app: FastAPI):
     mqtt.stop()
 
 
-app = FastAPI(title="Clean Assistant", version="0.28.1", lifespan=lifespan)
+app = FastAPI(title="Clean Assistant", version="0.29.0", lifespan=lifespan)
 
 
 @app.get("/api/state")
@@ -1193,6 +1199,19 @@ async def set_view(payload: dict):
 def get_battery():
     """Salud de la batería: ciclos, consumo por m²/min, velocidad de carga y salud estimada."""
     return battery_health.summary()
+
+
+@app.get("/api/sensors")
+def get_sensors():
+    """Aviso de limpieza de sensores: horas de trabajo desde el último 'Hecho' (límite 35 h)."""
+    return sensor_care.summary()
+
+
+@app.post("/api/sensors/reset")
+def reset_sensors():
+    sensor_care.reset()
+    mqtt.publish_sensors()
+    return {"ok": True, **sensor_care.summary()}
 
 
 @app.post("/api/prefs/map_image_live")

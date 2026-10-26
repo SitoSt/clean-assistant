@@ -37,8 +37,10 @@ BINARY_OPS = {"DEVICE_MAPID_PUSH_MAP_INFO", "DEVICE_MAPID_GET_GLOBAL_INFO_RSP",
 
 # workMode -> estado (tabla de @agnoc, device-state.mapper.ts; capturada en un Conga 5090)
 _RETURNING = {5, 10, 12, 27, 32, 38}
-_PAUSED = {4, 9, 26, 31, 37}
-_CLEANING = {1, 6, 7, 11, 20, 25, 30, 36}
+# 9 = segunda pasada de "ir a un punto" (limpiando), no pausa como en @agnoc (captura de la app
+# oficial del 4090, @mactron254, ronda 2)
+_PAUSED = {4, 26, 31, 37}
+_CLEANING = {1, 6, 7, 9, 11, 20, 25, 30, 36}
 _MANUAL = {2}
 _ZONE_MODES = {30, 31, 32, 35}  # workMode en modo zona (device-mode.mapper)
 _SPOT_MODES = {7, 9, 12, 14}    # workMode en modo punto
@@ -51,12 +53,14 @@ FAN_TO_ROBOT = {0: 13, 1: 10, 2: 11, 3: 12}
 # vida (horas) de cada consumible, la MISMA que usa la interfaz (index.html, CONS): el robot legacy
 # da el % de uso y CA trabaja en horas de uso
 CONSUMABLE_LIFE_H = {"main_brush": 300, "side_brush": 220, "filter": 100, "dishcloth": 160}
-# modos de limpieza con orden propia (captura de la app oficial): fregado 0x107D, esquinas/bordes
-# 0x1081 (no está en @agnoc). Mismo patrón que el automático: {1: 1 empezar / 2 pausa / 0 parar}.
-OP_MOP, OP_EDGE = "DEVICE_MOP_FLOOR_CLEAN_REQ", 0x1081
-MODE_OPS = {2: OP_MOP, 1: OP_EDGE}     # commands.CLEAN_MODES: Fregado=2, Bordes=1
+# modos de limpieza con orden propia (captura de la app oficial, ronda 2): fregado 0x107D (workMode
+# 36), bordes 0x107F (workMode 25) y espiral 0x1081 (workMode 20; no está en @agnoc). Mismo patrón
+# que el automático: {1: 1 empezar / 2 pausa}. Para PARAR bordes la app usa 0x1121 {1: 4}.
+OP_MOP, OP_EDGE, OP_SPIRAL = "DEVICE_MOP_FLOOR_CLEAN_REQ", "DEVICE_BORDER_CLEAN_REQ", 0x1081
+MODE_OPS = {2: OP_MOP, 1: OP_EDGE, 5: OP_SPIRAL}   # commands.CLEAN_MODES: Fregado=2, Bordes=1, Espiral=5
 _MOP_MODES = {36, 37, 38, 40}
-_EDGE_MODES = {20, 23}
+_EDGE_MODES = {25, 26, 27, 29}
+_SPIRAL_MODES = {20, 23}
 LOCK_EVERY_S = 60                      # la nube real retoma el control (0x1079) cada ~1 min
 
 
@@ -190,7 +194,7 @@ class LegacyRobot:
             if typ == 3:                                   # volver a la base / cancelarlo
                 if val:
                     return self._send("DEVICE_CHARGE_REQ", {1: 1})
-                return self._auto_clean(CTRL_STOP)
+                return self._run_mode(CTRL_STOP, starting=False)   # parar en el modo en curso
             if val == 4:                                   # elegir modo (Auto/Fregado/Bordes…)
                 self._mode = int(typ)
                 return {"result": 0}
@@ -567,12 +571,16 @@ class LegacyRobot:
         """Iniciar/pausar/reanudar en el modo que toca. Al iniciar, el elegido en la interfaz;
         al pausar/reanudar, el que el robot está haciendo (por su workMode). Fregado y bordes
         tienen orden propia; el resto, el automático."""
+        if ctrl == CTRL_STOP and self.state.work_mode in _EDGE_MODES:
+            return self._send("DEVICE_MAPID_INTO_MODEIDLE_INFO_REQ", {1: 4})   # parar bordes (app)
         if starting:
             op = MODE_OPS.get(self._mode)
         elif self.state.work_mode in _MOP_MODES:
             op = OP_MOP
         elif self.state.work_mode in _EDGE_MODES:
             op = OP_EDGE
+        elif self.state.work_mode in _SPIRAL_MODES:
+            op = OP_SPIRAL
         else:
             op = None
         if op is None:

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.29.0
+- **Aviso de limpiar los sensores cada 35 h** (todos los modelos; idea de @mactron254, issue #12):
+  CA cuenta las horas limpiando/mapeando desde el último reset (`sensor_care.json`). Fila
+  **«Sensores»** en Ajustes → Consumibles con su botón ↺, y en Home Assistant el binary sensor
+  **Conga Limpiar sensores** (se enciende a las 35 h), el sensor **Conga Horas desde limpiar
+  sensores** y el botón **Conga Sensores limpiados**.
+- **Legacy (3xxx/4xxx), corregido con la 2.ª captura de la app oficial** (gracias, @mactron254):
+  - **Bordes** usa su propia orden (`0x107F`, modo 25) y **Espiral** la suya (`0x1081`, modo 20);
+    antes Bordes enviaba la de Espiral.
+  - **Parar** una limpieza de bordes manda además la orden con la que la app la cierra.
+  - Pausar/reanudar respeta el modo en curso (fregado, bordes, espiral o automático).
+  - Modo **9** (segunda pasada de "ir a un punto") se muestra como limpiando.
+  - "Cancelar vuelta a la base" usa la misma parada que el resto.
+
 ## 0.28.1
 - **Conga 7090** reconocido por su nombre (`project_type` `CECOTECCRL30V-7003`; gracias a @zjuanma,
   issue #13).
