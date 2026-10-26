@@ -193,7 +193,7 @@ the cleaning trail, and an occlusion mask so the robot "hides" under beds and fu
 local, using the `pose`, current room, `map` and `trail` data from Clean Assistant.
 
 <p align="center">
-  <img width="640" alt="Conga cleaning trail on a 3D floorplan in Home Assistant (by miajed)" src="https://github.com/user-attachments/assets/5bc5519c-15da-40a7-a5c2-c094f455b4b8" />
+  <img width="640" alt="Conga moving live on a 3D floorplan in Home Assistant (by miajed)" src="https://github.com/user-attachments/assets/b8a71d3e-9205-4bdc-b121-f0382ae867d5" />
   <img width="300" alt="Custom Conga popup in Home Assistant (by miajed)" src="https://github.com/user-attachments/assets/5fd5ebe4-fdfb-4e7a-93da-3d39d6bd9c29" />
 </p>
 

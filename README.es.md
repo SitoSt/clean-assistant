@@ -195,7 +195,7 @@ bajo camas y muebles. Todo local, con los datos `pose`, habitación actual, `map
 Clean Assistant.
 
 <p align="center">
-  <img width="640" alt="Recorrido del Conga sobre un plano 3D en Home Assistant (de miajed)" src="https://github.com/user-attachments/assets/5bc5519c-15da-40a7-a5c2-c094f455b4b8" />
+  <img width="640" alt="El Conga moviéndose en directo sobre un plano 3D en Home Assistant (de miajed)" src="https://github.com/user-attachments/assets/b8a71d3e-9205-4bdc-b121-f0382ae867d5" />
   <img width="300" alt="Ventana del Conga personalizada en Home Assistant (de miajed)" src="https://github.com/user-attachments/assets/5fd5ebe4-fdfb-4e7a-93da-3d39d6bd9c29" />
 </p>
 
