@@ -582,39 +582,7 @@ class RealRobot:
         if service.endswith("device/report_data"):
             try:
                 data = json.loads(msg.get("content", "{}")).get("data", {})
-                prev = self.state.state
-                self.state.update_from_report(data)
-                if self.state.state != prev:
-                    wm = data.get("workMode")
-                    self.log(f"  [robot] estado -> {self.state.state} "
-                             f"(workMode={wm} charge={data.get('chargeStatus')} "
-                             f"bat {self.state.battery})")
-                    # traza: al iniciar una limpieza nueva (desde base/inactivo) empieza de cero;
-                    # reanudar (pausa->limpiando) o volver (a base->limpiando) conserva el recorrido.
-                    if self.state.state in ("cleaning", "mapping") and prev in ("docked", "idle"):
-                        self.trail = []
-                        self._trail_last = None
-                    # workMode activo no reconocido (sale 'inactivo'): candidato a mapeando/etc.
-                    if self.state.state == "idle" and wm not in (0, 1, None):
-                        self.log(f"  [robot] AVISO: workMode={wm} no reconocido -> 'inactivo'. "
-                                 f"Si estás mapeando o limpiando, apúntalo para mapearlo.")
-                # faultCode nuevo: se registra en el log para ir construyendo el diccionario de
-                # errores. 0 = sin fallo; 21xx = avisos de estación normales al cargar (se omiten).
-                try:
-                    code = int(data.get("faultCode") or 0)
-                except (TypeError, ValueError):
-                    code = 0
-                if code != self._last_fault_log:
-                    self._last_fault_log = code
-                    if code and not (2100 <= code <= 2199):
-                        known = WARN_MESSAGES.get(code)
-                        if known:
-                            self.log(f"  [robot] faultCode={code} ({known})")
-                        else:
-                            self.log(f"  [robot] AVISO: faultCode={code} SIN traducir. Si sabes qué "
-                                     f"error muestra la app de Cecotec, repórtalo para el diccionario.")
-                self._query_startup()
-                self._notify()
+                self._apply_report(data)
             except Exception:
                 pass
             ws.send(tls, json.dumps({"code": 0, "traceId": trace,
@@ -624,7 +592,11 @@ class RealRobot:
 
         if service.endswith("transmit/to_bind"):
             try:
-                self._parse_ack(json.loads(msg.get("content", "{}")).get("data", {}))
+                data = json.loads(msg.get("content", "{}")).get("data", {})
+                if data.get("control") == "status":   # el 6090 manda aquí su estado cada ~5 s, no por report_data
+                    self._apply_report(data)
+                else:
+                    self._parse_ack(data)
             except Exception:
                 pass
             ws.send(tls, json.dumps({"code": 0, "traceId": trace,
@@ -634,6 +606,42 @@ class RealRobot:
         # cualquier otro servicio: acuse genérico
         ws.send(tls, json.dumps({"code": 0, "traceId": trace,
                 "service": service.split("?")[0], "result": True}))
+
+    def _apply_report(self, data: dict):
+        """Estado del robot: report_data, o to_bind con control=status (6090)."""
+        prev = self.state.state
+        self.state.update_from_report(data)
+        if self.state.state != prev:
+            wm = data.get("workMode")
+            self.log(f"  [robot] estado -> {self.state.state} "
+                     f"(workMode={wm} charge={data.get('chargeStatus')} "
+                     f"bat {self.state.battery})")
+            # traza: al iniciar una limpieza nueva (desde base/inactivo) empieza de cero;
+            # reanudar (pausa->limpiando) o volver (a base->limpiando) conserva el recorrido.
+            if self.state.state in ("cleaning", "mapping") and prev in ("docked", "idle"):
+                self.trail = []
+                self._trail_last = None
+            # workMode activo no reconocido (sale 'inactivo'): candidato a mapeando/etc.
+            if self.state.state == "idle" and wm not in (0, 1, None):
+                self.log(f"  [robot] AVISO: workMode={wm} no reconocido -> 'inactivo'. "
+                         f"Si estás mapeando o limpiando, apúntalo para mapearlo.")
+        # faultCode nuevo: se registra en el log para ir construyendo el diccionario de
+        # errores. 0 = sin fallo; 21xx = avisos de estación normales al cargar (se omiten).
+        try:
+            code = int(data.get("faultCode") or 0)
+        except (TypeError, ValueError):
+            code = 0
+        if code != self._last_fault_log:
+            self._last_fault_log = code
+            if code and not (2100 <= code <= 2199):
+                known = WARN_MESSAGES.get(code)
+                if known:
+                    self.log(f"  [robot] faultCode={code} ({known})")
+                else:
+                    self.log(f"  [robot] AVISO: faultCode={code} SIN traducir. Si sabes qué "
+                             f"error muestra la app de Cecotec, repórtalo para el diccionario.")
+        self._query_startup()
+        self._notify()
 
     def _parse_ack(self, data: dict):
         """Respuestas de get_* que traen datos de estado."""
